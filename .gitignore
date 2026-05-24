@@ -1,0 +1,59 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.db
+
+## Build
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+
+## Visual Studio
+.vs/
+*.rsuser
+*.vsp
+*.vsps
+*.vspf
+.idea/
+
+## Logs
+logs/
+*.log
+
+## Secrets — NEVER commit these
+appsettings.Development.json
+appsettings.Production.json
+**/secrets.json
+
+## Docker volumes
+postgres_data/
+redis_data/
+
+## Node (frontend)
+apps/web/node_modules/
+apps/web/.next/
+apps/web/.env.local
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Rider
+.idea/
+*.sln.iml
+
+## Coverage
+coverage/
+TestResults/
+*.trx
+*.coverage

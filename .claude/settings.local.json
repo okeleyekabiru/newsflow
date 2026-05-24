@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet package search Microsoft.Extensions.Identity.Core --take 5 2>&1)",
+      "PowerShell(dotnet package search Microsoft.AspNetCore.Identity.EntityFrameworkCore --take 3 2>&1)",
+      "PowerShell(dotnet package search Microsoft.EntityFrameworkCore --exact --take 3 2>&1)",
+      "PowerShell(Test-Path \"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.8\")",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.8\" -Recurse | Select-Object FullName | Format-Table -AutoSize)"
+    ]
+  }
+}

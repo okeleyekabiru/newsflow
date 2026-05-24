@@ -1,0 +1,17 @@
+# Ignore build artifacts and editor files
+**/bin
+**/obj
+**/.vs
+**/.git
+**/.gitignore
+**/.gitattributes
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+**/dist
+**/publish
+**/docker-compose.override.yml
+**/*.md
+**/*.log
+*.swp
+*.swo
