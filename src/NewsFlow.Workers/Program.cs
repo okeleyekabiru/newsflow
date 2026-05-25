@@ -38,6 +38,11 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddScoped<IPlatformAdapterFactory, PlatformAdapterFactory>();
 
         services.AddHttpClient<IAIProvider, ClaudeAIProvider>();
+        services.AddHttpClient<IVoiceProvider, ElevenLabsVoiceProvider>();
+        services.AddHttpClient<IStockFootageProvider, PexelsFootageProvider>();
+
+        services.AddSingleton<IVideoAssembler, FfmpegVideoAssembler>();
+        services.AddScoped<IStorageService, R2StorageService>();
 
         services.AddScoped<IngestPipelineFactory>();
         services.AddScoped<VideoGeneratorFactory>();
@@ -66,19 +71,25 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 // ── Register recurring jobs ───────────────────────────────────────────────────
-// Must be done after host.Build() so the Hangfire storage is initialised.
-// These definitions are authoritative — starting the Workers process ensures
-// the schedule is always current even after a deployment.
-RecurringJob.AddOrUpdate<IngestWorker>(
-    recurringJobId: "ingest-cycle",
-    methodCall:     x => x.RunOnce(CancellationToken.None),
-    cronExpression: "*/5 * * * *",     // every 5 minutes
-    timeZone:       TimeZoneInfo.Utc);
+// Use IRecurringJobManager (DI-based) instead of the static RecurringJob API.
+// The static API requires JobStorage.Current which is set only after host.Run()
+// starts the Hangfire server — the DI-based manager resolves the storage from
+// the registered IJobStorage directly, which is available right after Build().
+using (var scope = host.Services.CreateScope())
+{
+    var recurringJobs = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
 
-RecurringJob.AddOrUpdate<SchedulerWorker>(
-    recurringJobId: "scheduler-dispatch",
-    methodCall:     x => x.DispatchDuePostsAsync(CancellationToken.None),
-    cronExpression: "* * * * *",       // every minute
-    timeZone:       TimeZoneInfo.Utc);
+    recurringJobs.AddOrUpdate<IngestWorker>(
+        recurringJobId: "ingest-cycle",
+        methodCall:     x => x.RunOnce(CancellationToken.None),
+        cronExpression: "*/5 * * * *",     // every 5 minutes
+        timeZone:       TimeZoneInfo.Utc);
+
+    recurringJobs.AddOrUpdate<SchedulerWorker>(
+        recurringJobId: "scheduler-dispatch",
+        methodCall:     x => x.DispatchDuePostsAsync(CancellationToken.None),
+        cronExpression: "* * * * *",       // every minute
+        timeZone:       TimeZoneInfo.Utc);
+}
 
 await host.RunAsync();

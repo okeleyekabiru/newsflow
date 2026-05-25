@@ -11,7 +11,16 @@
       "PowerShell(dotnet build --no-restore 2>&1 | Where-Object { $_ -match \"error CS|Build succeeded|Build FAILED|Error\\\\\\(s\\\\\\)\" })",
       "PowerShell(git add -A)",
       "PowerShell(dotnet ef --version 2>&1)",
-      "PowerShell(dotnet ef migrations add Initial_WithIdentity --project src/NewsFlow.Infrastructure --startup-project src/NewsFlow.API 2>&1)"
+      "PowerShell(dotnet ef migrations add Initial_WithIdentity --project src/NewsFlow.Infrastructure --startup-project src/NewsFlow.API 2>&1)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)",
+      "PowerShell($maxWait = 90; $waited = 0; do { Start-Sleep -Seconds 5; $waited += 5; $result = docker info 2>&1; if \\($LASTEXITCODE -eq 0\\) { Write-Host \"Docker is ready after ${waited}s\"; break } else { Write-Host \"Waiting... ${waited}s\" } } while \\($waited -lt $maxWait\\); if \\($waited -ge $maxWait\\) { Write-Host \"Docker did not start in time\" })",
+      "PowerShell(cd \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\"; $env:COMPOSE_BAKE=\"false\"; docker compose build api workers 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\"; $env:COMPOSE_BAKE=\"false\"; docker compose build web 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\"; $env:COMPOSE_BAKE=\"false\"; docker compose up -d 2>&1)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(head -5)",
+      "PowerShell(Get-Process -Id 26752)",
+      "PowerShell(docker compose -f \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\\\\docker-compose.yml\" ps 2>&1)"
     ]
   }
 }

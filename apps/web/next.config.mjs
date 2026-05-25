@@ -1,6 +1,7 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Required for multi-stage Docker build (copies only what's needed to run)
+  output: 'standalone',
   // Proxy API requests to the .NET backend during development
   async rewrites() {
     return [

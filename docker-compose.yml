@@ -34,11 +34,18 @@ services:
       context: .
       dockerfile: src/NewsFlow.API/Dockerfile
     ports:
-      - "5000:80"
+      - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__PostgreSQL=Host=postgres;Database=newsflow;Username=postgres;Password=yourpassword
       - ConnectionStrings__Redis=redis:6379
+      # JWT — must be ≥ 32 chars for HS256
+      - Jwt__Secret=newsflow-dev-secret-key-min-32-chars-ok!
+      - Jwt__ExpiryMinutes=60
+      - Jwt__RefreshExpiryDays=30
+      # App
+      - App__BaseUrl=http://localhost:5000
+      - Cors__AllowedOrigins=http://localhost:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +60,8 @@ services:
       - DOTNET_ENVIRONMENT=Development
       - ConnectionStrings__PostgreSQL=Host=postgres;Database=newsflow;Username=postgres;Password=yourpassword
       - ConnectionStrings__Redis=redis:6379
+      # Workers don't issue JWTs but the shared config key must resolve
+      - Jwt__Secret=newsflow-dev-secret-key-min-32-chars-ok!
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,10 +70,13 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:5000
+        - NEXT_PUBLIC_SIGNALR_URL=http://localhost:5000/hubs/collaboration
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:5000
       - NEXT_PUBLIC_SIGNALR_URL=http://localhost:5000/hubs/collaboration
