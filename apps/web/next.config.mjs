@@ -2,13 +2,16 @@
 const nextConfig = {
   // Required for multi-stage Docker build (copies only what's needed to run)
   output: 'standalone',
-  // Proxy API requests to the .NET backend during development
+  // Proxy all /api/* and /hubs/* requests to the .NET backend.
+  // INTERNAL_API_URL is a *server-side* runtime variable so the destination
+  // can differ between Docker (http://api:8080) and local dev (http://localhost:5000)
+  // without rebuilding the image.  It is NOT prefixed NEXT_PUBLIC_ so it is
+  // never exposed to the browser.
   async rewrites() {
+    const backend = process.env.INTERNAL_API_URL ?? 'http://localhost:5000';
     return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'}/api/:path*`,
-      },
+      { source: '/api/:path*',  destination: `${backend}/api/:path*`  },
+      { source: '/hubs/:path*', destination: `${backend}/hubs/:path*` },
     ];
   },
   images: {

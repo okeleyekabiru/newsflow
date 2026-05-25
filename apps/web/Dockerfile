@@ -10,11 +10,17 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Bake the public API URL at build time (can be overridden by build-arg)
-ARG NEXT_PUBLIC_API_URL=http://localhost:5000
-ARG NEXT_PUBLIC_SIGNALR_URL=http://localhost:5000/hubs/collaboration
+# NEXT_PUBLIC_API_URL intentionally left empty so api.ts uses relative paths
+# (/api/...) which are proxied by Next.js rewrites → no cross-origin requests.
+ARG NEXT_PUBLIC_API_URL=
+ARG NEXT_PUBLIC_SIGNALR_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SIGNALR_URL=$NEXT_PUBLIC_SIGNALR_URL
+
+# INTERNAL_API_URL: the server-side proxy target written into routes-manifest.json
+# at build time.  Default suits local `npm run dev`; override via build-arg in CI/Docker.
+ARG INTERNAL_API_URL=http://localhost:5000
+ENV INTERNAL_API_URL=$INTERNAL_API_URL
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

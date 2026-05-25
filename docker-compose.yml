@@ -45,7 +45,7 @@ services:
       - Jwt__RefreshExpiryDays=30
       # App
       - App__BaseUrl=http://localhost:5000
-      - Cors__AllowedOrigins=http://localhost:3000
+      - Cors__AllowedOrigins=http://localhost:3001
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,14 +72,14 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      # NEXT_PUBLIC_* are intentionally empty — api.ts uses relative paths
+      # which Next.js proxies to INTERNAL_API_URL (baked into routes-manifest at build time).
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:5000
-        - NEXT_PUBLIC_SIGNALR_URL=http://localhost:5000/hubs/collaboration
+        - NEXT_PUBLIC_API_URL=
+        - NEXT_PUBLIC_SIGNALR_URL=
+        - INTERNAL_API_URL=http://api:8080
     ports:
       - "3001:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:5000
-      - NEXT_PUBLIC_SIGNALR_URL=http://localhost:5000/hubs/collaboration
     depends_on:
       - api
 
