@@ -9,7 +9,9 @@
       "PowerShell($env:COMPOSE_BAKE = \"false\"; docker compose build workers)",
       "PowerShell($env:COMPOSE_BAKE = \"false\"; docker compose build web)",
       "PowerShell(dotnet build --no-restore 2>&1 | Where-Object { $_ -match \"error CS|Build succeeded|Build FAILED|Error\\\\\\(s\\\\\\)\" })",
-      "PowerShell(git add -A)"
+      "PowerShell(git add -A)",
+      "PowerShell(dotnet ef --version 2>&1)",
+      "PowerShell(dotnet ef migrations add Initial_WithIdentity --project src/NewsFlow.Infrastructure --startup-project src/NewsFlow.API 2>&1)"
     ]
   }
 }
