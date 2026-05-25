@@ -1,4 +1,3 @@
-using Amazon.S3;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -100,9 +99,8 @@ builder.Services.AddHttpClient<IStockFootageProvider, PexelsFootageProvider>();
 
 builder.Services.AddSingleton<IVideoAssembler, FfmpegVideoAssembler>();
 
-// AWS S3 — credentials resolved from env vars / ~/.aws / IAM role automatically
-builder.Services.AddAWSService<IAmazonS3>();
-builder.Services.AddScoped<IStorageService, S3StorageService>();
+// Cloudflare R2 — credentials configured via Storage:* in appsettings
+builder.Services.AddScoped<IStorageService, R2StorageService>();
 
 builder.Services.AddScoped<IngestPipelineFactory>();
 builder.Services.AddScoped<PostBuilder>();
