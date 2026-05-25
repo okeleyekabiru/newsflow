@@ -151,3 +151,25 @@ public class GetArticlesHandler : IRequestHandler<GetArticlesQuery, Result<IEnum
         return Result.Success(dtos);
     }
 }
+
+public class GetArticleVersionsHandler
+    : IRequestHandler<GetArticleVersionsQuery, Result<IEnumerable<ArticleVersionDto>>>
+{
+    private readonly IUnitOfWork _uow;
+
+    public GetArticleVersionsHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Result<IEnumerable<ArticleVersionDto>>> Handle(
+        GetArticleVersionsQuery query, CancellationToken ct)
+    {
+        var article = await _uow.Articles.GetWithVersionsAsync(query.ArticleId, ct);
+        if (article is null) return Result.Failure<IEnumerable<ArticleVersionDto>>("Article not found.");
+        if (article.UserId != query.UserId) return Result.Failure<IEnumerable<ArticleVersionDto>>("Unauthorized.");
+
+        var dtos = article.Versions
+            .OrderByDescending(v => v.SavedAt)
+            .Select(v => new ArticleVersionDto(v.Id, v.WordCount, v.SavedAt));
+
+        return Result.Success(dtos);
+    }
+}

@@ -5,7 +5,11 @@
       "PowerShell(dotnet package search Microsoft.AspNetCore.Identity.EntityFrameworkCore --take 3 2>&1)",
       "PowerShell(dotnet package search Microsoft.EntityFrameworkCore --exact --take 3 2>&1)",
       "PowerShell(Test-Path \"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.8\")",
-      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.8\" -Recurse | Select-Object FullName | Format-Table -AutoSize)"
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.nuget\\\\packages\\\\microsoft.extensions.identity.core\\\\10.0.8\" -Recurse | Select-Object FullName | Format-Table -AutoSize)",
+      "PowerShell($env:COMPOSE_BAKE = \"false\"; docker compose build workers)",
+      "PowerShell($env:COMPOSE_BAKE = \"false\"; docker compose build web)",
+      "PowerShell(dotnet build --no-restore 2>&1 | Where-Object { $_ -match \"error CS|Build succeeded|Build FAILED|Error\\\\\\(s\\\\\\)\" })",
+      "PowerShell(git add -A)"
     ]
   }
 }

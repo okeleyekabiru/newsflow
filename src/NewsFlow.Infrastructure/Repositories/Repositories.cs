@@ -30,17 +30,6 @@ public class Repository<T> : IRepository<T> where T : class
     public void Remove(T entity) => Set.Remove(entity);
 }
 
-public class UserRepository : Repository<User>, IUserRepository
-{
-    public UserRepository(NewsFlowDbContext db) : base(db) { }
-
-    public Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
-        Set.FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant(), ct);
-
-    public Task<bool> ExistsAsync(string email, CancellationToken ct = default) =>
-        Set.AnyAsync(u => u.Email == email.ToLowerInvariant(), ct);
-}
-
 public class ArticleRepository : Repository<Article>, IArticleRepository
 {
     public ArticleRepository(NewsFlowDbContext db) : base(db) { }
@@ -156,7 +145,6 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly NewsFlowDbContext _db;
 
-    public IUserRepository Users { get; }
     public IArticleRepository Articles { get; }
     public IPostRepository Posts { get; }
     public IAccountRepository Accounts { get; }
@@ -168,7 +156,6 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(NewsFlowDbContext db)
     {
         _db = db;
-        Users = new UserRepository(db);
         Articles = new ArticleRepository(db);
         Posts = new PostRepository(db);
         Accounts = new AccountRepository(db);

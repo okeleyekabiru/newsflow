@@ -4,7 +4,6 @@ namespace NewsFlow.Core.Interfaces;
 
 public interface IUnitOfWork : IDisposable
 {
-    IUserRepository Users { get; }
     IArticleRepository Articles { get; }
     IPostRepository Posts { get; }
     IAccountRepository Accounts { get; }

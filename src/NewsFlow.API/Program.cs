@@ -27,8 +27,9 @@ builder.Services.AddSignalR();
 builder.Services.AddDbContext<NewsFlowDbContext>(opts =>
     opts.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSQL")));
 
-// Microsoft Identity — AddIdentityCore avoids adding cookie auth which would
-// conflict with JWT.  UserManager<User> is the only Identity service needed here.
+// Microsoft Identity — use AddIdentityCore so cookie auth is NOT registered as the
+// default scheme (which would conflict with JwtBearer).  SignInManager and
+// DefaultTokenProviders are added explicitly to get the full Identity feature set.
 builder.Services.AddIdentityCore<User>(opts =>
 {
     opts.Password.RequireDigit = true;
@@ -38,7 +39,9 @@ builder.Services.AddIdentityCore<User>(opts =>
     opts.User.RequireUniqueEmail = true;
 })
 .AddRoles<IdentityRole<Guid>>()
-.AddEntityFrameworkStores<NewsFlowDbContext>();
+.AddEntityFrameworkStores<NewsFlowDbContext>()
+.AddDefaultTokenProviders()
+.AddSignInManager<SignInManager<User>>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opts =>

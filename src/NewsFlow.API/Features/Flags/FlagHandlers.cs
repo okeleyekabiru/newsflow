@@ -123,6 +123,51 @@ public class EscalateFlagHandler : IRequestHandler<EscalateFlagCommand, Result>
     }
 }
 
+public class GetFlagDetailHandler : IRequestHandler<GetFlagDetailQuery, Result<FlagDetailDto>>
+{
+    private readonly IUnitOfWork _uow;
+
+    public GetFlagDetailHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Result<FlagDetailDto>> Handle(GetFlagDetailQuery query, CancellationToken ct)
+    {
+        var flag = await _uow.FlaggedPosts.GetWithAuditLogsAsync(query.FlagId, ct);
+        if (flag is null) return Result.Failure<FlagDetailDto>("Flag not found.");
+
+        var dto = new FlagDetailDto(
+            flag.Id,
+            flag.Article.Title,
+            flag.Article.ContentMd,
+            flag.FlagReason,
+            flag.SeverityScore,
+            flag.Category.ToString(),
+            flag.TriggerKeywords,
+            flag.SourceName,
+            flag.Status.ToString(),
+            flag.AuditLogs.Select(l => new AuditLogDto(l.Action, l.ActorId, l.Notes, l.Timestamp)));
+
+        return Result.Success(dto);
+    }
+}
+
+public class GetFlagRulesHandler : IRequestHandler<GetFlagRulesQuery, Result<IEnumerable<FlagRuleDto>>>
+{
+    private readonly IUnitOfWork _uow;
+
+    public GetFlagRulesHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Result<IEnumerable<FlagRuleDto>>> Handle(GetFlagRulesQuery query, CancellationToken ct)
+    {
+        var rules = await _uow.FlagRuleConfigs.GetByUserIdAsync(query.UserId, ct);
+        var dtos = rules.Select(r => new FlagRuleDto(
+            r.Id, r.Category.ToString(), r.DefaultDecision.ToString(),
+            r.TrustedSources, r.BlockedKeywords,
+            r.SeverityThreshold, r.EscalationEmail, r.AutoPostTrustedSources));
+
+        return Result.Success(dtos);
+    }
+}
+
 public class GetPendingFlagsHandler : IRequestHandler<GetPendingFlagsQuery, Result<IEnumerable<FlagDto>>>
 {
     private readonly IUnitOfWork _uow;

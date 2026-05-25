@@ -14,8 +14,6 @@ public class User : IdentityUser<Guid>
     public string Name { get; private set; } = string.Empty;
     public string Plan { get; private set; } = "Free";
     public bool IsActive { get; private set; } = true;
-    public string? RefreshToken { get; private set; }
-    public DateTime? RefreshTokenExpiry { get; private set; }
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
@@ -58,20 +56,6 @@ public class User : IdentityUser<Guid>
         };
 
         return Result.Success(user);
-    }
-
-    public void SetRefreshToken(string token, DateTime expiry)
-    {
-        RefreshToken = token;
-        RefreshTokenExpiry = expiry;
-        Touch();
-    }
-
-    public void ClearRefreshToken()
-    {
-        RefreshToken = null;
-        RefreshTokenExpiry = null;
-        Touch();
     }
 
     public void Upgrade(string plan)
