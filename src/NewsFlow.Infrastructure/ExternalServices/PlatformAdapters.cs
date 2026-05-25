@@ -46,7 +46,10 @@ public class TikTokAdapter : IPlatformAdapter
         Account account, PublishRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Publishing to TikTok account @{Handle}", account.Handle);
-        using var http = CreateClient(account.AccessToken);
+        // Use the factory-managed client so Polly retry/CB policies are applied.
+        var http = _factory.CreateClient("TikTok");
+        http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", account.AccessToken);
 
         try
         {
@@ -54,7 +57,7 @@ public class TikTokAdapter : IPlatformAdapter
             {
                 var body = new
                 {
-                    post_info = new { title = request.Content, privacy_level = "PUBLIC_TO_EVERYONE" },
+                    post_info   = new { title = request.Content, privacy_level = "PUBLIC_TO_EVERYONE" },
                     source_info = new { source = "PULL_FROM_URL", video_url = request.VideoUrl }
                 };
                 var resp = await http.PostAsJsonAsync(
@@ -92,14 +95,6 @@ public class TikTokAdapter : IPlatformAdapter
 
     public Task<long> GetFollowerCountAsync(Account account, CancellationToken ct = default) =>
         Task.FromResult(account.FollowerCount);
-
-    private static HttpClient CreateClient(string accessToken)
-    {
-        var client = new HttpClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", accessToken);
-        return client;
-    }
 }
 
 // ── Twitter / X ───────────────────────────────────────────────────────────────
@@ -124,7 +119,7 @@ public class TwitterAdapter : IPlatformAdapter
         Account account, PublishRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Publishing to X @{Handle}", account.Handle);
-        using var http = new HttpClient();
+        var http = _factory.CreateClient("Twitter");
         http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", account.AccessToken);
 
@@ -175,7 +170,7 @@ public class InstagramAdapter : IPlatformAdapter
         Account account, PublishRequest request, CancellationToken ct = default)
     {
         _logger.LogInformation("Publishing to Instagram @{Handle}", account.Handle);
-        using var http = new HttpClient();
+        var http   = _factory.CreateClient("Instagram");
         var userId = account.Handle;   // handle stores the IG user-id (numeric string)
         var token  = account.AccessToken;
         var baseUrl = $"https://graph.instagram.com/v18.0/{userId}";
@@ -259,7 +254,7 @@ public class YouTubeAdapter : IPlatformAdapter
         if (string.IsNullOrEmpty(request.VideoUrl))
             return new PublishResult(false, null, "YouTube requires a video URL.");
 
-        using var http = new HttpClient();
+        var http = _factory.CreateClient("YouTube");
         http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", account.AccessToken);
 

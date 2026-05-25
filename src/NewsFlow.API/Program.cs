@@ -14,7 +14,51 @@ using NewsFlow.Infrastructure.Data;
 using NewsFlow.Infrastructure.ExternalServices;
 using NewsFlow.Infrastructure.Pipeline;
 using NewsFlow.Infrastructure.Repositories;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Retry;
+using System.Net;
 using System.Text;
+
+// ── Polly resilience factories ─────────────────────────────────────────────────
+// Retry is stateless — one shared instance is fine.
+// Circuit-breaker is stateful — call NewCb() per client so each service tracks
+// its own failure count independently.
+
+static IAsyncPolicy<HttpResponseMessage> NewRetryPolicy() =>
+    new ResiliencePipelineBuilder<HttpResponseMessage>()
+        .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+        {
+            MaxRetryAttempts = 3,
+            Delay            = TimeSpan.FromSeconds(1),
+            BackoffType      = DelayBackoffType.Exponential,
+            UseJitter        = true,
+            ShouldHandle     = new PredicateBuilder<HttpResponseMessage>()
+                .Handle<HttpRequestException>()
+                .HandleResult(r => (int)r.StatusCode >= 500 ||
+                                    r.StatusCode == HttpStatusCode.TooManyRequests)
+        })
+        .Build()
+        .AsAsyncPolicy();
+
+static IAsyncPolicy<HttpResponseMessage> NewCircuitBreaker() =>
+    new ResiliencePipelineBuilder<HttpResponseMessage>()
+        .AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
+        {
+            // Trip when ≥ 50 % of the last N requests fail,
+            // requiring at least 5 requests in the 1-min sampling window.
+            MinimumThroughput = 5,
+            SamplingDuration  = TimeSpan.FromMinutes(1),
+            BreakDuration     = TimeSpan.FromMinutes(1),
+            FailureRatio      = 0.5,
+            ShouldHandle      = new PredicateBuilder<HttpResponseMessage>()
+                .Handle<HttpRequestException>()
+                .HandleResult(r => (int)r.StatusCode >= 500)
+        })
+        .Build()
+        .AsAsyncPolicy();
+
+var retryPolicy = NewRetryPolicy();   // shared (stateless)
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,9 +137,35 @@ builder.Services.AddScoped<IPlatformAdapter, InstagramAdapter>();
 builder.Services.AddScoped<IPlatformAdapter, YouTubeAdapter>();
 builder.Services.AddScoped<IPlatformAdapterFactory, PlatformAdapterFactory>();
 
-builder.Services.AddHttpClient<IAIProvider, ClaudeAIProvider>();
-builder.Services.AddHttpClient<IVoiceProvider, ElevenLabsVoiceProvider>();
-builder.Services.AddHttpClient<IStockFootageProvider, PexelsFootageProvider>();
+// Typed clients — each gets the shared retry + its own circuit breaker
+builder.Services.AddHttpClient<IAIProvider, ClaudeAIProvider>()
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+builder.Services.AddHttpClient<IVoiceProvider, ElevenLabsVoiceProvider>()
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+builder.Services.AddHttpClient<IStockFootageProvider, PexelsFootageProvider>()
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+// Named clients for platform adapters — adapters resolve by name via IHttpClientFactory
+builder.Services.AddHttpClient("TikTok")
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+builder.Services.AddHttpClient("Twitter")
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+builder.Services.AddHttpClient("Instagram")
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
+
+builder.Services.AddHttpClient("YouTube")
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(NewCircuitBreaker());
 
 builder.Services.AddSingleton<IVideoAssembler, FfmpegVideoAssembler>();
 
