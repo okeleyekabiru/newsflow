@@ -57,6 +57,8 @@ var host = Host.CreateDefaultBuilder(args)
             opts.Queues = ["ingest", "video", "scheduler", "notifier", "default"];
         });
 
+        services.AddHttpClient<NewsApiService>();
+
         services.AddHostedService<IngestWorker>();
         services.AddHostedService<SchedulerWorker>();
         services.AddHostedService<VideoWorker>();
