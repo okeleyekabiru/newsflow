@@ -229,6 +229,10 @@ public class SchedulerWorker : BackgroundService
         }
     }
 
+    /// <summary>Public entry-point for the Hangfire recurring job.</summary>
+    public async Task DispatchDuePostsAsync(CancellationToken ct) =>
+        await ProcessDuePostsAsync(ct);
+
     private async Task ProcessDuePostsAsync(CancellationToken ct)
     {
         using var scope = _provider.CreateScope();

@@ -65,4 +65,20 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .Build();
 
+// ── Register recurring jobs ───────────────────────────────────────────────────
+// Must be done after host.Build() so the Hangfire storage is initialised.
+// These definitions are authoritative — starting the Workers process ensures
+// the schedule is always current even after a deployment.
+RecurringJob.AddOrUpdate<IngestWorker>(
+    recurringJobId: "ingest-cycle",
+    methodCall:     x => x.RunOnce(CancellationToken.None),
+    cronExpression: "*/5 * * * *",     // every 5 minutes
+    timeZone:       TimeZoneInfo.Utc);
+
+RecurringJob.AddOrUpdate<SchedulerWorker>(
+    recurringJobId: "scheduler-dispatch",
+    methodCall:     x => x.DispatchDuePostsAsync(CancellationToken.None),
+    cronExpression: "* * * * *",       // every minute
+    timeZone:       TimeZoneInfo.Utc);
+
 await host.RunAsync();

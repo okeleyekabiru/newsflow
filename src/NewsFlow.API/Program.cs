@@ -1,4 +1,8 @@
 using FluentValidation;
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
+using NewsFlow.API;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -188,6 +192,17 @@ builder.Services.AddCors(opts =>
 builder.Services.AddStackExchangeRedisCache(opts =>
     opts.Configuration = builder.Configuration.GetConnectionString("Redis"));
 
+// ── Hangfire (dashboard only — job processing runs in NewsFlow.Workers) ───────
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(c =>
+        c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("PostgreSQL")!)));
+
+// Register the auth filter so it can be resolved via DI
+builder.Services.AddSingleton<HangfireAuthFilter>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -201,6 +216,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<CollaborationHub>("/hubs/collaboration");
+
+// ── Hangfire dashboard ───────────────────────────────────────────────────────
+// Served at /hangfire; auth is enforced by HangfireAuthFilter (Admin role in
+// non-Development environments; any authenticated user in Development).
+var authFilter = app.Services.GetRequiredService<HangfireAuthFilter>();
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    DashboardTitle   = "NewsFlow — Job Dashboard",
+    Authorization    = [authFilter],
+    // Allow the dashboard to be embedded in iFrames (optional)
+    IgnoreAntiforgeryToken = app.Environment.IsDevelopment(),
+});
+
+// ── Note on recurring jobs ───────────────────────────────────────────────────
+// RecurringJob.AddOrUpdate<IngestWorker> is registered in NewsFlow.Workers,
+// where IngestWorker is defined and the full service graph is available.
+// Both processes share the same PostgreSQL-backed Hangfire queue, so jobs
+// scheduled by Workers appear in this dashboard automatically.
 
 using (var scope = app.Services.CreateScope())
 {
