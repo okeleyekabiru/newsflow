@@ -27,20 +27,15 @@ const CAT_ICON: Record<string, { icon: string; color: string; bg: string }> = {
 };
 
 function itemIcon(item: FeedItem) {
-  if (item.status === 'blocked') return CAT_ICON.blocked;
-  return CAT_ICON[item.category.toLowerCase()] ?? { icon: 'ti-news', color: 'var(--text2)', bg: 'rgba(255,255,255,.05)' };
+  return CAT_ICON[item.category?.toLowerCase()] ?? { icon: 'ti-news', color: 'var(--text2)', bg: 'rgba(255,255,255,.05)' };
 }
 
 function ItemBadges({ item }: { item: FeedItem }) {
   const badges = [];
-  if (item.status === 'auto')    badges.push(<Badge key="a" variant="auto" icon="ti-bolt">Auto-post</Badge>);
-  if (item.status === 'review')  badges.push(<Badge key="r" variant="review" icon="ti-eye">Review required</Badge>);
-  if (item.status === 'blocked') badges.push(<Badge key="b" variant="blocked" icon="ti-lock">Blocked</Badge>);
-  if (item.hasVideo)             badges.push(<Badge key="v" variant="video" icon="ti-player-play">Video</Badge>);
-  if (item.severity) {
-    const v = item.severity >= 8 ? 'sev-high' : 'sev-mid';
-    badges.push(<Badge key="s" variant={v}>Sev {item.severity}/10</Badge>);
-  }
+  const s = item.status?.toLowerCase();
+  if (s === 'draft')     badges.push(<Badge key="d" variant="review" icon="ti-pencil">Draft</Badge>);
+  if (s === 'published') badges.push(<Badge key="p" variant="auto" icon="ti-check">Published</Badge>);
+  if (s === 'archived')  badges.push(<Badge key="a" variant="blocked" icon="ti-archive">Archived</Badge>);
   return <>{badges}</>;
 }
 
@@ -75,7 +70,7 @@ export default function FeedPage() {
     load(next ?? undefined);
   }
 
-  const hasReview = items.some((i) => i.status === 'review');
+  const hasReview = items.some((i) => i.status?.toLowerCase() === 'draft');
 
   const filterBar = (
     <div className="flex gap-[6px]">
@@ -141,8 +136,8 @@ export default function FeedPage() {
                   <div>
                     <div className="text-[12px] font-[500] leading-[1.4] mb-[3px]">{item.title}</div>
                     <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap">
-                      <span>{item.source}</span><span>·</span>
-                      <span>{relativeTime(item.publishedAt)}</span>
+                      <span>{item.sourceName ?? item.category}</span><span>·</span>
+                      <span>{relativeTime(item.updatedAt)}</span>
                       <ItemBadges item={item} />
                     </div>
                   </div>

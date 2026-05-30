@@ -79,30 +79,29 @@ export default function DashboardPage() {
         {/* Stats row */}
         <div className="grid grid-cols-4 gap-[10px]">
           <StatCard
-            label="Posts today"
-            value={stats ? String(stats.postsToday) : '—'}
-            subHighlight={accounts.length ? `${accounts.length} accounts` : undefined}
-            sub="across"
+            label="Total posts"
+            value={stats ? String(stats.totalPosts) : '—'}
+            subHighlight={stats ? String(stats.totalPublished) : undefined}
+            sub="published"
             color="var(--accent)"
           />
           <StatCard
-            label="Total followers"
-            value={stats ? fmtNum(stats.totalFollowers) : '—'}
-            subHighlight={stats ? `+${fmtNum(stats.followersGainedThisWeek)}` : undefined}
-            sub="this week"
+            label="Total views"
+            value={stats ? fmtNum(stats.totalViews) : '—'}
+            subHighlight={stats ? fmtNum(stats.totalLikes) : undefined}
+            sub="likes"
             color="var(--accent2)"
           />
           <StatCard
             label="Est. revenue"
-            value={stats ? `$${stats.estimatedRevenue.toLocaleString()}` : '—'}
-            sub="This month so far"
+            value={stats ? `$${(stats.totalRevenue ?? 0).toLocaleString()}` : '—'}
+            sub="all time"
             color="var(--yellow)"
           />
           <StatCard
-            label="AI videos made"
-            value={stats ? String(stats.aiVideosMade) : '—'}
-            subHighlight={stats?.aiVideosProcessing ? String(stats.aiVideosProcessing) : undefined}
-            sub="processing"
+            label="Total shares"
+            value={stats ? fmtNum(stats.totalShares) : '—'}
+            sub="across all posts"
             color="var(--purple)"
           />
         </div>
@@ -132,11 +131,10 @@ export default function DashboardPage() {
                       <div>
                         <div className="text-[12px] font-[500] leading-[1.4] mb-[3px]">{item.title}</div>
                         <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap">
-                          <span>{item.source}</span><span>·</span>
-                          <span>{relativeTime(item.publishedAt)}</span>
-                          {item.status === 'auto' && <Badge variant="auto" icon="ti-bolt">Auto-post</Badge>}
-                          {item.status === 'review' && <Badge variant="review" icon="ti-eye">Review required</Badge>}
-                          {item.hasVideo && <Badge variant="video" icon="ti-player-play">Video</Badge>}
+                          <span>{item.sourceName ?? item.category}</span><span>·</span>
+                          <span>{relativeTime(item.updatedAt)}</span>
+                          {item.status?.toLowerCase() === 'published' && <Badge variant="auto" icon="ti-check">Published</Badge>}
+                          {item.status?.toLowerCase() === 'draft' && <Badge variant="review" icon="ti-pencil">Draft</Badge>}
                         </div>
                       </div>
                     </div>

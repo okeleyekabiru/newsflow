@@ -20,7 +20,8 @@
       "PowerShell(netstat -ano)",
       "PowerShell(head -5)",
       "PowerShell(Get-Process -Id 26752)",
-      "PowerShell(docker compose -f \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\\\\docker-compose.yml\" ps 2>&1)"
+      "PowerShell(docker compose -f \"C:\\\\Users\\\\DELL\\\\source\\\\repos\\\\newsflow\\\\docker-compose.yml\" ps 2>&1)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:5000/api/feed\" -UseBasicParsing -TimeoutSec 3; \"Status: $\\($r.StatusCode\\)\" } catch { \"Error: $_\" })"
     ]
   }
 }

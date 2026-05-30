@@ -61,7 +61,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-4 gap-[10px]">
           <StatCard
             label="Total views"
-            value={loading ? '—' : stats ? `${(stats.totalFollowers / 1000).toFixed(0)}K` : '—'}
+            value={loading ? '—' : stats ? `${(stats.totalViews / 1000).toFixed(0)}K` : '—'}
             sub="Across all platforms"
             color="var(--accent)"
           />
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             label="Revenue (period)"
-            value={loading ? '—' : stats ? `$${stats.estimatedRevenue.toLocaleString()}` : '—'}
+            value={loading ? '—' : stats ? `$${(stats.totalRevenue ?? 0).toLocaleString()}` : '—'}
             sub={`Last ${range} days`}
             color="var(--yellow)"
           />

@@ -53,12 +53,19 @@ export interface Account {
 export interface FeedItem {
   id: string;
   title: string;
-  source: string;
+  sourceName: string | null;
   category: string;
-  publishedAt: string;
-  status: 'auto' | 'review' | 'blocked' | 'published';
-  severity?: number;
-  hasVideo?: boolean;
+  updatedAt: string;
+  status: string;
+  wordCount?: number;
+  template?: string;
+}
+
+export interface FeedPage {
+  items: FeedItem[];
+  total: number;
+  page: number;
+  perPage: number;
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -144,9 +151,10 @@ export const api = {
     apiFetch<void>('/api/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
 
   // Feed
-  getFeed: (params?: { status?: string; category?: string; page?: number; perPage?: number }) => {
+  getFeed: async (params?: { status?: string; category?: string; page?: number; perPage?: number }) => {
     const qs = new URLSearchParams(params as Record<string, string>).toString();
-    return apiFetch<FeedItem[]>(`/api/feed${qs ? `?${qs}` : ''}`);
+    const page = await apiFetch<FeedPage>(`/api/feed${qs ? `?${qs}` : ''}`);
+    return Array.isArray(page) ? page : (page?.items ?? []);
   },
 
   // Articles
