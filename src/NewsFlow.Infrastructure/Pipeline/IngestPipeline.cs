@@ -47,11 +47,7 @@ public class DuplicateCheckHandler : IngestHandler
 
     protected override async Task ProcessAsync(IngestContext context, CancellationToken ct)
     {
-        var existing = await _uow.Articles.GetByCategoryAsync(ArticleCategory.General, ct);
-        var isDuplicate = existing.Any(a =>
-            string.Equals(a.Title, context.RawTitle, StringComparison.OrdinalIgnoreCase));
-
-        if (isDuplicate)
+        if (await _uow.Articles.ExistsByTitleAsync(context.RawTitle, ct))
         {
             context.ShouldStop = true;
             context.StopReason = "Duplicate article detected.";
@@ -156,6 +152,30 @@ public class SafetyFilterHandler : IngestHandler
     }
 }
 
+public class FlagCreationHandler : IngestHandler
+{
+    private readonly IUnitOfWork _uow;
+
+    public FlagCreationHandler(IUnitOfWork uow) => _uow = uow;
+
+    protected override async Task ProcessAsync(IngestContext context, CancellationToken ct)
+    {
+        if (context.Article is null) return;
+        if (context.FilterResult?.Decision != ContentDecision.FlagForReview) return;
+
+        var result = FlaggedPost.Create(
+            context.Article.Id,
+            context.FilterResult.Reason,
+            Math.Max(1, context.FilterResult.SeverityScore),
+            context.Article.Category,
+            context.FilterResult.TriggerKeywords,
+            context.SourceName);
+
+        if (result.IsSuccess)
+            await _uow.FlaggedPosts.AddAsync(result.Value, ct);
+    }
+}
+
 public class AIRewriteHandler : IngestHandler
 {
     private readonly IAIProvider _ai;
@@ -166,8 +186,15 @@ public class AIRewriteHandler : IngestHandler
     {
         if (context.Article is null) return;
 
-        var rewritten = await _ai.RewriteHeadlineAsync(context.Article.Title, ct);
-        context.Article.Update(rewritten, context.Article.ContentMd, context.Article.Category);
+        try
+        {
+            var rewritten = await _ai.RewriteHeadlineAsync(context.Article.Title, ct);
+            context.Article.Update(rewritten, context.Article.ContentMd, context.Article.Category);
+        }
+        catch
+        {
+            // AI rewrite is best-effort — keep original headline and continue to persistence
+        }
     }
 }
 
@@ -204,16 +231,18 @@ public class IngestPipelineFactory
     public IngestHandler Build()
     {
         var duplicate = new DuplicateCheckHandler(_uow);
-        var source = new SourceValidationHandler(_uow);
-        var category = new CategoryHandler();
-        var safety = new SafetyFilterHandler(_filterContext);
-        var rewrite = new AIRewriteHandler(_ai);
-        var persist = new PersistenceHandler(_uow);
+        var source    = new SourceValidationHandler(_uow);
+        var category  = new CategoryHandler();
+        var safety    = new SafetyFilterHandler(_filterContext);
+        var flag      = new FlagCreationHandler(_uow);
+        var rewrite   = new AIRewriteHandler(_ai);
+        var persist   = new PersistenceHandler(_uow);
 
         duplicate
             .SetNext(source)
             .SetNext(category)
             .SetNext(safety)
+            .SetNext(flag)
             .SetNext(rewrite)
             .SetNext(persist);
 

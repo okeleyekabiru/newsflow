@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface NavItem {
   href: string;
@@ -51,7 +52,27 @@ const BADGE_COLORS: Record<string, string> = {
 };
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      const refresh = localStorage.getItem('refresh_token');
+      if (refresh) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: refresh }),
+        }).catch(() => {});
+      }
+    } finally {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      router.replace('/login');
+    }
+  }
 
   return (
     <aside
@@ -115,20 +136,27 @@ export default function Sidebar() {
       {/* Account pill */}
       <div className="p-3" style={{ borderTop: '1px solid var(--border)' }}>
         <div
-          className="flex items-center gap-[9px] rounded-[9px] p-[9px] pr-[11px] cursor-pointer"
+          className="flex items-center gap-[9px] rounded-[9px] p-[9px] pr-[8px]"
           style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}
         >
           <div
-            className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-[10px] font-[700] text-black font-mono"
+            className="w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-[10px] font-[700] text-black font-mono flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent2))' }}
           >
             KO
           </div>
-          <div className="flex-1">
-            <div className="text-[12px] font-[500]">Kabiru Okeleye</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-[500] truncate">Kabiru Okeleye</div>
             <div className="text-[9px] text-accent font-mono">Pro plan</div>
           </div>
-          <i className="ti ti-chevron-up-down text-text3 text-[13px]" />
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            title="Log out"
+            className="flex items-center justify-center w-[26px] h-[26px] rounded-[6px] text-text3 hover:text-red hover:bg-red/10 transition-colors flex-shrink-0 disabled:opacity-50"
+          >
+            <i className={`ti ${loggingOut ? 'ti-loader-2 animate-spin' : 'ti-logout'} text-[14px]`} />
+          </button>
         </div>
       </div>
     </aside>

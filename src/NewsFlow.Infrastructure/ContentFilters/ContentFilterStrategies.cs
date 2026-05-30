@@ -10,10 +10,14 @@ public class ConflictFilterStrategy : IContentFilterStrategy
 
     private static readonly string[] ConflictKeywords =
     [
-        "casualties", "airstrike", "bombing", "shelling", "offensive",
-        "ceasefire", "troops", "militia", "warzone", "fatalities",
-        "wounded", "siege", "evacuation", "refugee", "displaced",
-        "frontline", "combat", "artillery", "missile", "drone strike"
+        // Categoriser keywords (broad)
+        "war", "military", "troops", "combat", "ceasefire", "airstrike",
+        // Safety-filter keywords (specific)
+        "casualties", "bombing", "shelling", "offensive",
+        "militia", "warzone", "fatalities", "wounded", "siege",
+        "evacuation", "refugee", "displaced", "frontline",
+        "artillery", "missile", "drone strike", "drones strike",
+        "explosion", "attack", "assault", "invasion", "conflict"
     ];
 
     private static readonly string[] TrustedWarSources =
@@ -29,11 +33,10 @@ public class ConflictFilterStrategy : IContentFilterStrategy
         var text = $"{article.Title} {article.ContentMd}".ToLowerInvariant();
         var triggeredKeywords = ConflictKeywords.Where(k => text.Contains(k)).ToArray();
 
-        if (triggeredKeywords.Length == 0)
-            return Task.FromResult(new FilterResult(
-                ContentDecision.AutoPost, "No conflict keywords detected.", 0, []));
-
-        var severityScore = Math.Min(10, triggeredKeywords.Length * 2);
+        // Articles already categorised as ConflictAndWar always need review unless explicitly auto-posted
+        var severityScore = triggeredKeywords.Length == 0
+            ? 2
+            : Math.Min(10, triggeredKeywords.Length * 2);
 
         var trustedSources = ruleConfig?.TrustedSources ?? TrustedWarSources;
         var isTrustedSource = trustedSources.Any(s =>
@@ -60,7 +63,9 @@ public class ConflictFilterStrategy : IContentFilterStrategy
 
         return Task.FromResult(new FilterResult(
             ContentDecision.FlagForReview,
-            $"Conflict content detected — {triggeredKeywords.Length} trigger keyword(s) found.",
+            triggeredKeywords.Length > 0
+                ? $"Conflict content — {triggeredKeywords.Length} keyword(s) matched."
+                : "Conflict/war category — requires editorial review.",
             severityScore,
             triggeredKeywords));
     }
@@ -72,8 +77,13 @@ public class TerrorismFilterStrategy : IContentFilterStrategy
 
     private static readonly string[] TerrorismKeywords =
     [
-        "terrorist", "extremist", "jihad", "suicide bomber", "attack claimed",
-        "propaganda", "radicalisation", "cell", "plot foiled", "manifesto"
+        // Categoriser keywords (broad)
+        "terrorist", "extremist", "attack", "bomb", "jihad",
+        // Safety-filter keywords (specific)
+        "suicide bomber", "attack claimed", "propaganda",
+        "radicalisation", "cell", "plot foiled", "manifesto",
+        "explosion", "shooting", "gunman", "hostage", "killed",
+        "strike", "drone", "militant"
     ];
 
     public Task<FilterResult> EvaluateAsync(
@@ -84,10 +94,10 @@ public class TerrorismFilterStrategy : IContentFilterStrategy
         var text = $"{article.Title} {article.ContentMd}".ToLowerInvariant();
         var triggered = TerrorismKeywords.Where(k => text.Contains(k)).ToArray();
 
-        if (triggered.Length == 0)
-            return Task.FromResult(new FilterResult(ContentDecision.AutoPost, "Clean.", 0, []));
-
-        var severity = Math.Min(10, triggered.Length * 3);
+        // Articles categorised as Terrorism always require review
+        var severity = triggered.Length == 0
+            ? 3
+            : Math.Min(10, triggered.Length * 3);
 
         if (severity >= 6)
             return Task.FromResult(new FilterResult(
@@ -97,7 +107,9 @@ public class TerrorismFilterStrategy : IContentFilterStrategy
 
         return Task.FromResult(new FilterResult(
             ContentDecision.FlagForReview,
-            "Potential terrorism content — requires editorial review.",
+            triggered.Length > 0
+                ? $"Terrorism-related content — {triggered.Length} keyword(s) matched."
+                : "Terrorism category — requires editorial review.",
             severity, triggered));
     }
 }

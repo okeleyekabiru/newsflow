@@ -34,42 +34,42 @@ public class ArticleRepository : Repository<Article>, IArticleRepository
 {
     public ArticleRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<Article>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Article>>(
-            Set.Where(a => a.UserId == userId).OrderByDescending(a => a.UpdatedAt).AsEnumerable());
+    public async Task<IEnumerable<Article>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Where(a => a.UserId == userId)
+                 .OrderByDescending(a => a.UpdatedAt)
+                 .ToListAsync(ct);
 
     public Task<Article?> GetWithVersionsAsync(Guid id, CancellationToken ct = default) =>
         Set.Include(a => a.Versions).FirstOrDefaultAsync(a => a.Id == id, ct);
 
-    public Task<IEnumerable<Article>> GetByCategoryAsync(ArticleCategory category, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Article>>(
-            Set.Where(a => a.Category == category).AsEnumerable());
+    public async Task<IEnumerable<Article>> GetByCategoryAsync(ArticleCategory category, CancellationToken ct = default) =>
+        await Set.Where(a => a.Category == category).ToListAsync(ct);
+
+    public Task<bool> ExistsByTitleAsync(string title, CancellationToken ct = default) =>
+        Set.AnyAsync(a => a.Title == title, ct);
 }
 
 public class PostRepository : Repository<Post>, IPostRepository
 {
     public PostRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<Post>> GetScheduledBeforeAsync(DateTime scheduledAt, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Post>>(
-            Set.Where(p => p.Status == PostStatus.Scheduled && p.ScheduledAt <= scheduledAt).AsEnumerable());
+    public async Task<IEnumerable<Post>> GetScheduledBeforeAsync(DateTime scheduledAt, CancellationToken ct = default) =>
+        await Set.Where(p => p.Status == PostStatus.Scheduled && p.ScheduledAt <= scheduledAt)
+                 .ToListAsync(ct);
 
-    public Task<IEnumerable<Post>> GetByArticleIdAsync(Guid articleId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Post>>(
-            Set.Where(p => p.ArticleId == articleId).AsEnumerable());
+    public async Task<IEnumerable<Post>> GetByArticleIdAsync(Guid articleId, CancellationToken ct = default) =>
+        await Set.Where(p => p.ArticleId == articleId).ToListAsync(ct);
 
-    public Task<IEnumerable<Post>> GetByAccountIdAsync(Guid accountId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Post>>(
-            Set.Where(p => p.AccountId == accountId).AsEnumerable());
+    public async Task<IEnumerable<Post>> GetByAccountIdAsync(Guid accountId, CancellationToken ct = default) =>
+        await Set.Where(p => p.AccountId == accountId).ToListAsync(ct);
 }
 
 public class AccountRepository : Repository<Account>, IAccountRepository
 {
     public AccountRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<Account>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Account>>(
-            Set.Where(a => a.UserId == userId && a.IsActive).AsEnumerable());
+    public async Task<IEnumerable<Account>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Where(a => a.UserId == userId && a.IsActive).ToListAsync(ct);
 
     public Task<Account?> GetByPlatformAsync(Guid userId, Platform platform, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(a => a.UserId == userId && a.Platform == platform && a.IsActive, ct);
@@ -79,19 +79,17 @@ public class FlaggedPostRepository : Repository<FlaggedPost>, IFlaggedPostReposi
 {
     public FlaggedPostRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<FlaggedPost>> GetPendingAsync(CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<FlaggedPost>>(
-            Set.Include(f => f.Article)
-               .Where(f => f.Status == FlagStatus.Pending)
-               .OrderByDescending(f => f.SeverityScore)
-               .AsEnumerable());
+    public async Task<IEnumerable<FlaggedPost>> GetPendingAsync(CancellationToken ct = default) =>
+        await Set.Include(f => f.Article)
+                 .Where(f => f.Status == FlagStatus.Pending)
+                 .OrderByDescending(f => f.SeverityScore)
+                 .ToListAsync(ct);
 
-    public Task<IEnumerable<FlaggedPost>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<FlaggedPost>>(
-            Set.Include(f => f.Article)
-               .Where(f => f.Article.UserId == userId)
-               .OrderByDescending(f => f.CreatedAt)
-               .AsEnumerable());
+    public async Task<IEnumerable<FlaggedPost>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Include(f => f.Article)
+                 .Where(f => f.Article.UserId == userId)
+                 .OrderByDescending(f => f.CreatedAt)
+                 .ToListAsync(ct);
 
     public Task<FlaggedPost?> GetWithAuditLogsAsync(Guid id, CancellationToken ct = default) =>
         Set.Include(f => f.Article)
@@ -107,31 +105,27 @@ public class FlagRuleConfigRepository : Repository<FlagRuleConfig>, IFlagRuleCon
         Guid userId, ArticleCategory category, CancellationToken ct = default) =>
         Set.FirstOrDefaultAsync(r => r.UserId == userId && r.Category == category, ct);
 
-    public Task<IEnumerable<FlagRuleConfig>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<FlagRuleConfig>>(
-            Set.Where(r => r.UserId == userId).AsEnumerable());
+    public async Task<IEnumerable<FlagRuleConfig>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Where(r => r.UserId == userId).ToListAsync(ct);
 }
 
 public class SourceRepository : Repository<Source>, ISourceRepository
 {
     public SourceRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<Source>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Source>>(
-            Set.Where(s => s.UserId == userId && s.IsActive).AsEnumerable());
+    public async Task<IEnumerable<Source>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Where(s => s.UserId == userId && s.IsActive).ToListAsync(ct);
 
-    public Task<IEnumerable<Source>> GetAllActiveAsync(CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Source>>(
-            Set.Where(s => s.IsActive).AsEnumerable());
+    public async Task<IEnumerable<Source>> GetAllActiveAsync(CancellationToken ct = default) =>
+        await Set.Where(s => s.IsActive).ToListAsync(ct);
 }
 
 public class AnalyticsRepository : Repository<Analytics>, IAnalyticsRepository
 {
     public AnalyticsRepository(NewsFlowDbContext db) : base(db) { }
 
-    public Task<IEnumerable<Analytics>> GetByPostIdAsync(Guid postId, CancellationToken ct = default) =>
-        Task.FromResult<IEnumerable<Analytics>>(
-            Set.Where(a => a.PostId == postId).AsEnumerable());
+    public async Task<IEnumerable<Analytics>> GetByPostIdAsync(Guid postId, CancellationToken ct = default) =>
+        await Set.Where(a => a.PostId == postId).ToListAsync(ct);
 
     public async Task<decimal> GetTotalRevenueAsync(
         Guid userId, DateTime from, DateTime to, CancellationToken ct = default) =>

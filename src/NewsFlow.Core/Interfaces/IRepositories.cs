@@ -23,6 +23,7 @@ public interface IArticleRepository : IRepository<Article>
     Task<IEnumerable<Article>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<Article?> GetWithVersionsAsync(Guid id, CancellationToken ct = default);
     Task<IEnumerable<Article>> GetByCategoryAsync(ArticleCategory category, CancellationToken ct = default);
+    Task<bool> ExistsByTitleAsync(string title, CancellationToken ct = default);
 }
 
 public interface IPostRepository : IRepository<Post>
