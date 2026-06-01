@@ -40,7 +40,9 @@ public record ArticleDto(
     string Category,
     string Template,
     int WordCount,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    string? SourceName,
+    string? SourceUrl);
 
 public record ArticleVersionDto(
     Guid Id,

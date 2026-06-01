@@ -123,13 +123,14 @@ export default function DashboardPage() {
                 {feed.map((item) => {
                   const ic = feedIcon(item);
                   return (
-                    <div key={item.id} className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0">
+                    <Link key={item.id} href={`/feed/${item.id}`}
+                      className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0 hover:bg-white/[0.02] -mx-[14px] px-[14px] rounded-[7px] transition-colors">
                       <div className="w-8 h-8 rounded-[7px] flex items-center justify-center flex-shrink-0"
                         style={{ background: ic.bg }}>
                         <i className={`ti ${ic.icon} text-[14px]`} style={{ color: ic.color }} />
                       </div>
-                      <div>
-                        <div className="text-[12px] font-[500] leading-[1.4] mb-[3px]">{item.title}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[12px] font-[500] leading-[1.4] mb-[3px] hover:text-accent transition-colors truncate">{item.title}</div>
                         <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap">
                           <span>{item.sourceName ?? item.category}</span><span>·</span>
                           <span>{relativeTime(item.updatedAt)}</span>
@@ -137,7 +138,8 @@ export default function DashboardPage() {
                           {item.status?.toLowerCase() === 'draft' && <Badge variant="review" icon="ti-pencil">Draft</Badge>}
                         </div>
                       </div>
-                    </div>
+                      <i className="ti ti-chevron-right text-[12px] text-text3 self-center flex-shrink-0" />
+                    </Link>
                   );
                 })}
               </div>

@@ -131,7 +131,8 @@ public class GetArticleHandler : IRequestHandler<GetArticleQuery, Result<Article
         return Result.Success(new ArticleDto(
             article.Id, article.Title, article.ContentMd,
             article.Status.ToString(), article.Category.ToString(),
-            article.Template.ToString(), article.WordCount, article.UpdatedAt));
+            article.Template.ToString(), article.WordCount, article.UpdatedAt,
+            article.SourceName, article.SourceUrl));
     }
 }
 
@@ -146,7 +147,8 @@ public class GetArticlesHandler : IRequestHandler<GetArticlesQuery, Result<IEnum
         var articles = await _uow.Articles.GetByUserIdAsync(query.UserId, ct);
         var dtos = articles.Select(a => new ArticleDto(
             a.Id, a.Title, a.ContentMd, a.Status.ToString(),
-            a.Category.ToString(), a.Template.ToString(), a.WordCount, a.UpdatedAt));
+            a.Category.ToString(), a.Template.ToString(), a.WordCount, a.UpdatedAt,
+            a.SourceName, a.SourceUrl));
 
         return Result.Success(dtos);
     }

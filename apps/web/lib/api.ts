@@ -27,8 +27,10 @@ export interface Article {
   category: string;
   template: string;
   wordCount: number;
-  status: 'draft' | 'published' | 'review';
+  status: string;
   updatedAt: string;
+  sourceName: string | null;
+  sourceUrl: string | null;
 }
 
 export interface OverviewStats {
@@ -159,6 +161,7 @@ export const api = {
 
   // Articles
   getArticles: () => apiFetch<Article[]>('/api/articles'),
+  getArticle:  (id: string) => apiFetch<Article>(`/api/articles/${id}`),
   createArticle: (data: { title: string; contentMd: string; category: string; template: string }) =>
     apiFetch<Article>('/api/articles', { method: 'POST', body: JSON.stringify(data) }),
   updateArticle: (id: string, data: Partial<Omit<Article, 'id'>>) =>
