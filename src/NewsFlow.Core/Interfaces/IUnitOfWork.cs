@@ -9,6 +9,7 @@ public interface IUnitOfWork : IDisposable
     IAccountRepository Accounts { get; }
     IFlaggedPostRepository FlaggedPosts { get; }
     IFlagRuleConfigRepository FlagRuleConfigs { get; }
+    IUserSettingsRepository UserSettings { get; }
     ISourceRepository Sources { get; }
     IAnalyticsRepository Analytics { get; }
 

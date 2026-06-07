@@ -413,6 +413,61 @@ namespace NewsFlow.Infrastructure.Migrations
                     b.ToTable("FlagRuleConfigs");
                 });
 
+            modelBuilder.Entity("NewsFlow.Core.Entities.UserSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AiModel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AspectRatio")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailAlerts")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IngestFrequency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OutputLanguage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReviewAlerts")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StockFootage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Voice")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserSettings");
+                });
+
             modelBuilder.Entity("NewsFlow.Core.Entities.FlaggedPost", b =>
                 {
                     b.Property<Guid>("Id")

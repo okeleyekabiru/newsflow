@@ -69,6 +69,50 @@ public class FlagRuleConfig : BaseEntity
     }
 }
 
+public class UserSettings : BaseEntity
+{
+    public Guid UserId { get; private set; }
+
+    // AI & Content
+    public string AiModel { get; private set; } = "Claude Sonnet 4.6";
+    public string OutputLanguage { get; private set; } = "English (US)";
+    public string IngestFrequency { get; private set; } = "Every 5 min";
+
+    // Video generation
+    public string Voice { get; private set; } = "Rachel — Calm";
+    public string StockFootage { get; private set; } = "Pexels HD";
+    public string AspectRatio { get; private set; } = "9:16 (Vertical)";
+
+    // Notifications
+    public string EmailAlerts { get; private set; } = "Daily";
+    public string ReviewAlerts { get; private set; } = "Instant";
+
+    private UserSettings() { }
+
+    public static UserSettings CreateDefault(Guid userId) => new() { UserId = userId };
+
+    public void Update(
+        string aiModel,
+        string outputLanguage,
+        string ingestFrequency,
+        string voice,
+        string stockFootage,
+        string aspectRatio,
+        string emailAlerts,
+        string reviewAlerts)
+    {
+        AiModel = aiModel;
+        OutputLanguage = outputLanguage;
+        IngestFrequency = ingestFrequency;
+        Voice = voice;
+        StockFootage = stockFootage;
+        AspectRatio = aspectRatio;
+        EmailAlerts = emailAlerts;
+        ReviewAlerts = reviewAlerts;
+        Touch();
+    }
+}
+
 public class Source : BaseEntity
 {
     public Guid UserId { get; private set; }

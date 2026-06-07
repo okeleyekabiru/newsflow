@@ -201,14 +201,22 @@ public class UpdateFlagRuleHandler : IRequestHandler<UpdateFlagRuleCommand, Resu
 
         if (config is null)
         {
+            // New rule: create + populate, then INSERT. Do NOT call Update() here —
+            // Set.Update() would flip the Added state to Modified and EF would issue an
+            // UPDATE against a non-existent row (0 rows affected → DbUpdateConcurrencyException).
             config = FlagRuleConfig.CreateDefault(cmd.UserId, cmd.Category);
+            config.Update(cmd.DefaultDecision, cmd.TrustedSources, cmd.BlockedKeywords,
+                cmd.SeverityThreshold, cmd.EscalationEmail, cmd.AutoPostTrustedSources);
             await _uow.FlagRuleConfigs.AddAsync(config, ct);
         }
+        else
+        {
+            // Existing rule is already tracked by the context; mutate and persist as UPDATE.
+            config.Update(cmd.DefaultDecision, cmd.TrustedSources, cmd.BlockedKeywords,
+                cmd.SeverityThreshold, cmd.EscalationEmail, cmd.AutoPostTrustedSources);
+            _uow.FlagRuleConfigs.Update(config);
+        }
 
-        config.Update(cmd.DefaultDecision, cmd.TrustedSources, cmd.BlockedKeywords,
-            cmd.SeverityThreshold, cmd.EscalationEmail, cmd.AutoPostTrustedSources);
-
-        _uow.FlagRuleConfigs.Update(config);
         await _uow.CommitAsync(ct);
         return Result.Success();
     }

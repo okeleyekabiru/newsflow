@@ -70,6 +70,51 @@ export interface FeedPage {
   perPage: number;
 }
 
+/** Decisions the safety pipeline can take for a category. Must match the API ContentDecision enum. */
+export type ContentDecision = 'AutoPost' | 'FlagForReview' | 'Block';
+
+/** Article categories the API recognises. Must match the API ArticleCategory enum. */
+export const ARTICLE_CATEGORIES = [
+  'Politics', 'Finance', 'Technology', 'Sports', 'Health', 'Entertainment',
+  'Weather', 'Science', 'ConflictAndWar', 'Terrorism', 'General',
+] as const;
+export type ArticleCategory = (typeof ARTICLE_CATEGORIES)[number];
+
+/** A per-category content-filter rule (GET /api/flags/rules). */
+export interface FlagRule {
+  id: string;
+  category: ArticleCategory;
+  defaultDecision: ContentDecision;
+  trustedSources: string[];
+  blockedKeywords: string[];
+  severityThreshold: number;
+  escalationEmail: string | null;
+  autoPostTrustedSources: boolean;
+}
+
+/** Payload for PUT /api/flags/rules (UserId is injected server-side from the JWT). */
+export interface FlagRuleUpdate {
+  category: ArticleCategory;
+  defaultDecision: ContentDecision;
+  trustedSources: string[];
+  blockedKeywords: string[];
+  severityThreshold: number;
+  escalationEmail: string | null;
+  autoPostTrustedSources: boolean;
+}
+
+/** User-level preferences (GET/PUT /api/settings). */
+export interface UserSettings {
+  aiModel: string;
+  outputLanguage: string;
+  ingestFrequency: string;
+  voice: string;
+  stockFootage: string;
+  aspectRatio: string;
+  emailAlerts: string;
+  reviewAlerts: string;
+}
+
 // ── Token helpers ─────────────────────────────────────────────────────────────
 
 function getToken() {
@@ -177,6 +222,16 @@ export const api = {
     apiFetch<void>(`/api/flags/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ notes: notes ?? '' }) }),
   escalateFlag: (id: string, notes?: string) =>
     apiFetch<void>(`/api/flags/${id}/escalate`, { method: 'PATCH', body: JSON.stringify({ notes: notes ?? '' }) }),
+
+  // Flag rules (content filters) — per-category safety configuration
+  getFlagRules: () => apiFetch<FlagRule[]>('/api/flags/rules'),
+  updateFlagRule: (rule: FlagRuleUpdate) =>
+    apiFetch<void>('/api/flags/rules', { method: 'PUT', body: JSON.stringify(rule) }),
+
+  // User preferences (AI, video, notifications)
+  getSettings: () => apiFetch<UserSettings>('/api/settings'),
+  updateSettings: (settings: UserSettings) =>
+    apiFetch<void>('/api/settings', { method: 'PUT', body: JSON.stringify(settings) }),
 
   // AI
   rewriteHeadline:  (headline: string) =>

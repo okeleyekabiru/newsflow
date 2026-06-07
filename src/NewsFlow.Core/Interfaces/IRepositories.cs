@@ -52,6 +52,11 @@ public interface IFlagRuleConfigRepository : IRepository<FlagRuleConfig>
     Task<IEnumerable<FlagRuleConfig>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
 }
 
+public interface IUserSettingsRepository : IRepository<UserSettings>
+{
+    Task<UserSettings?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+}
+
 public interface ISourceRepository : IRepository<Source>
 {
     Task<IEnumerable<Source>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default);

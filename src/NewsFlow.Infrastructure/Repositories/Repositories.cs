@@ -109,6 +109,14 @@ public class FlagRuleConfigRepository : Repository<FlagRuleConfig>, IFlagRuleCon
         await Set.Where(r => r.UserId == userId).ToListAsync(ct);
 }
 
+public class UserSettingsRepository : Repository<UserSettings>, IUserSettingsRepository
+{
+    public UserSettingsRepository(NewsFlowDbContext db) : base(db) { }
+
+    public Task<UserSettings?> GetByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        Set.FirstOrDefaultAsync(s => s.UserId == userId, ct);
+}
+
 public class SourceRepository : Repository<Source>, ISourceRepository
 {
     public SourceRepository(NewsFlowDbContext db) : base(db) { }
@@ -144,6 +152,7 @@ public class UnitOfWork : IUnitOfWork
     public IAccountRepository Accounts { get; }
     public IFlaggedPostRepository FlaggedPosts { get; }
     public IFlagRuleConfigRepository FlagRuleConfigs { get; }
+    public IUserSettingsRepository UserSettings { get; }
     public ISourceRepository Sources { get; }
     public IAnalyticsRepository Analytics { get; }
 
@@ -155,6 +164,7 @@ public class UnitOfWork : IUnitOfWork
         Accounts = new AccountRepository(db);
         FlaggedPosts = new FlaggedPostRepository(db);
         FlagRuleConfigs = new FlagRuleConfigRepository(db);
+        UserSettings = new UserSettingsRepository(db);
         Sources = new SourceRepository(db);
         Analytics = new AnalyticsRepository(db);
     }

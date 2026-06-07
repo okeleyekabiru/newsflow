@@ -21,6 +21,7 @@ public class NewsFlowDbContext : IdentityDbContext<User, IdentityRole<Guid>, Gui
     public DbSet<FlaggedPost> FlaggedPosts => Set<FlaggedPost>();
     public DbSet<FlagAuditLog> FlagAuditLogs => Set<FlagAuditLog>();
     public DbSet<FlagRuleConfig> FlagRuleConfigs => Set<FlagRuleConfig>();
+    public DbSet<UserSettings> UserSettings => Set<UserSettings>();
     public DbSet<Source> Sources => Set<Source>();
     public DbSet<Analytics> Analytics => Set<Analytics>();
 
@@ -101,6 +102,12 @@ public class NewsFlowDbContext : IdentityDbContext<User, IdentityRole<Guid>, Gui
             e.Property(x => x.TrustedSources).HasColumnType("text[]");
             e.Property(x => x.BlockedKeywords).HasColumnType("text[]");
             e.HasIndex(x => new { x.UserId, x.Category }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserSettings>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.UserId).IsUnique();
         });
 
         modelBuilder.Entity<Source>(e =>
