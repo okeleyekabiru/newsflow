@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Topbar from '@/components/layout/Topbar';
 import Panel from '@/components/ui/Panel';
 import Badge from '@/components/ui/Badge';
@@ -48,10 +49,13 @@ function relativeTime(iso: string) {
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const [items, setItems]             = useState<FeedItem[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
   const [activeCategory, setActive]   = useState<string | null>(null);
+  const [posting, setPosting]         = useState<Set<string>>(new Set());
+  const [toast, setToast]             = useState('');
 
   const load = useCallback((category?: string) => {
     setLoading(true);
@@ -68,6 +72,24 @@ export default function FeedPage() {
     const next = activeCategory === cat ? null : cat;
     setActive(next);
     load(next ?? undefined);
+  }
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  }
+
+  async function postDraft(id: string) {
+    setPosting((prev) => { const n = new Set(prev); n.add(id); return n; });
+    try {
+      await api.publishArticle(id, []);
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, status: 'published' } : i));
+      showToast('Article published successfully.');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Post failed');
+    } finally {
+      setPosting((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    }
   }
 
   const hasReview = items.some((i) => i.status?.toLowerCase() === 'draft');
@@ -89,6 +111,13 @@ export default function FeedPage() {
 
   return (
     <>
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-[8px] text-[12px] font-[500]"
+          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)' }}>
+          {toast}
+        </div>
+      )}
+
       <Topbar title="Live news feed" live>
         {filterBar}
       </Topbar>
@@ -127,26 +156,48 @@ export default function FeedPage() {
           <div className="flex flex-col divide-y divide-border">
             {items.map((item) => {
               const ic = itemIcon(item);
+              const isDraft = item.status?.toLowerCase() === 'draft';
+              const isBusy = posting.has(item.id);
+
               return (
-                <Link
+                <div
                   key={item.id}
-                  href={`/feed/${item.id}`}
-                  className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0 hover:bg-white/[0.02] -mx-[14px] px-[14px] rounded-[7px] transition-colors cursor-pointer"
+                  className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0"
                 >
-                  <div className="w-8 h-8 rounded-[7px] flex items-center justify-center flex-shrink-0"
+                  <div className="w-8 h-8 rounded-[7px] flex items-center justify-center flex-shrink-0 mt-[2px]"
                     style={{ background: ic.bg }}>
                     <i className={`ti ${ic.icon} text-[14px]`} style={{ color: ic.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-[500] leading-[1.4] mb-[3px] hover:text-accent transition-colors">{item.title}</div>
-                    <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap">
+                    <div className="text-[12px] font-[500] leading-[1.4] mb-[3px] text-text">{item.title}</div>
+                    <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap mb-[2px]">
                       <span>{item.sourceName ?? item.category}</span><span>·</span>
                       <span>{relativeTime(item.updatedAt)}</span>
                       <ItemBadges item={item} />
                     </div>
+
+                    {/* Draft action buttons */}
+                    {isDraft && (
+                      <div className="flex gap-[5px] mt-[6px]">
+                        <button
+                          onClick={() => router.push(`/writeup?id=${item.id}`)}
+                          className="flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px] cursor-pointer"
+                          style={{ background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
+                        >
+                          <i className="ti ti-pencil text-[10px]" /> Edit
+                        </button>
+                        <button
+                          onClick={() => postDraft(item.id)}
+                          disabled={isBusy}
+                          className="flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px] cursor-pointer disabled:opacity-50"
+                          style={{ background: 'rgba(0,229,160,.12)', color: 'var(--accent)', border: '1px solid rgba(0,229,160,.3)' }}
+                        >
+                          <i className="ti ti-send text-[10px]" /> {isBusy ? 'Posting…' : 'Post directly'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <i className="ti ti-chevron-right text-[12px] text-text3 self-center flex-shrink-0" />
-                </Link>
+                </div>
               );
             })}
           </div>

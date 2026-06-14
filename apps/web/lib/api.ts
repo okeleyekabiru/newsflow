@@ -21,6 +21,19 @@ export interface Flag {
   time: string; // ISO datetime
 }
 
+export interface FlagDetail {
+  id: string;
+  articleTitle: string;
+  contentMd: string;
+  flagReason: string;
+  severityScore: number;
+  category: string;
+  triggerKeywords: string[];
+  sourceName: string;
+  status: string;
+  auditLogs: { action: string; actorId: string; notes: string | null; timestamp: string }[];
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -227,6 +240,7 @@ export const api = {
 
   // Flags / review queue
   getFlags: () => apiFetch<Flag[]>('/api/flags'),
+  getFlag: (id: string) => apiFetch<FlagDetail>(`/api/flags/${id}`),
   approveFlag: (id: string, notes?: string) =>
     apiFetch<void>(`/api/flags/${id}/approve`, { method: 'PATCH', body: JSON.stringify({ notes: notes ?? '' }) }),
   rejectFlag: (id: string, notes?: string) =>

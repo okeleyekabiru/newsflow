@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Topbar from '@/components/layout/Topbar';
-import { api } from '@/lib/api';
+import { api, type Article } from '@/lib/api';
 
 const TEMPLATES = [
-  { id: 'breaking', label: '⚡ Breaking', desc: 'Fast, punchy, single-source' },
-  { id: 'analysis', label: '🔬 Analysis', desc: 'Deep dive, multi-source' },
-  { id: 'thread',   label: '🧵 Thread',   desc: 'Twitter-optimised sequence' },
-  { id: 'script',   label: '🎬 Script',   desc: 'Video narration script' },
+  { id: 'breaking',  label: '⚡ Breaking', desc: 'Fast, punchy, single-source' },
+  { id: 'analysis',  label: '🔬 Analysis', desc: 'Deep dive, multi-source' },
+  { id: 'thread',    label: '🧵 Thread',   desc: 'Twitter-optimised sequence' },
+  { id: 'script',    label: '🎬 Script',   desc: 'Video narration script' },
 ];
 
 const INITIAL_MD = `# G7 Digital Trade Summit — Full Analysis
@@ -36,17 +37,49 @@ const PUBLISH_ACCOUNTS = [
   { id: 'instagram-1',icon: 'ti-brand-instagram', style: 'plat-instagram', handle: '@reelsnews',      defaultChecked: false },
 ];
 
-export default function WriteupPage() {
+function mapTemplate(apiTemplate: string): string {
+  const map: Record<string, string> = {
+    breakingnews: 'breaking',
+    analysis:     'analysis',
+    opinion:      'analysis',
+    explainer:    'analysis',
+    socialcaption:'thread',
+    interview:    'analysis',
+  };
+  return map[apiTemplate.toLowerCase()] ?? 'analysis';
+}
+
+function WriteupContent() {
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get('id');
+
   const [content, setContent]             = useState(INITIAL_MD);
   const [activeTemplate, setActiveTemplate] = useState('analysis');
   const [articleId, setArticleId]         = useState<string | null>(null);
+  const [loadedArticle, setLoadedArticle] = useState<Article | null>(null);
+  const [loadingArticle, setLoadingArticle] = useState(false);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(
     new Set(PUBLISH_ACCOUNTS.filter((a) => a.defaultChecked).map((a) => a.id)),
   );
-  const [saving, setSaving]   = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiWorking, setAiWorking] = useState<string | null>(null);
-  const [toast, setToast]     = useState('');
+  const [toast, setToast]       = useState('');
+
+  useEffect(() => {
+    if (!idParam) return;
+    setLoadingArticle(true);
+    api.getArticle(idParam)
+      .then((article) => {
+        setContent(article.contentMd);
+        setArticleId(article.id);
+        setActiveTemplate(mapTemplate(article.template));
+        setLoadedArticle(article);
+      })
+      .catch((e: Error) => showToast(e.message))
+      .finally(() => setLoadingArticle(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idParam]);
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
@@ -155,8 +188,8 @@ export default function WriteupPage() {
   }
 
   const aiTools = [
-    { key: 'rewrite', icon: 'ti-wand',        label: 'Rewrite headline',     color: 'var(--accent)',   action: rewriteHeadline },
-    { key: 'script',  icon: 'ti-player-play',  label: 'Generate video script', color: 'var(--yellow)',  action: generateScript },
+    { key: 'rewrite', icon: 'ti-wand',        label: 'Rewrite headline',      color: 'var(--accent)',  action: rewriteHeadline },
+    { key: 'script',  icon: 'ti-player-play',  label: 'Generate video script', color: 'var(--yellow)', action: generateScript },
   ];
 
   return (
@@ -168,7 +201,7 @@ export default function WriteupPage() {
         </div>
       )}
 
-      <Topbar title="Write-up studio">
+      <Topbar title={loadedArticle ? 'Edit article' : 'Write-up studio'}>
         <button
           onClick={() => showToast('AI assist chat coming soon.')}
           className="flex items-center gap-[5px] px-[9px] py-[4px] rounded-btn border border-border text-text2 text-[10px]">
@@ -176,13 +209,13 @@ export default function WriteupPage() {
         </button>
         <button
           onClick={saveDraft}
-          disabled={saving}
+          disabled={saving || loadingArticle}
           className="flex items-center gap-[5px] px-[9px] py-[4px] rounded-btn border border-border text-text2 text-[10px] disabled:opacity-50">
           <i className="ti ti-device-floppy" /> {saving ? 'Saving…' : 'Save draft'}
         </button>
         <button
           onClick={publish}
-          disabled={publishing || saving}
+          disabled={publishing || saving || loadingArticle}
           className="flex items-center gap-[5px] px-[11px] py-[6px] rounded-btn text-[11px] font-[500] text-black disabled:opacity-50"
           style={{ background: 'var(--accent)' }}>
           <i className="ti ti-send" /> {publishing ? 'Publishing…' : 'Publish'}
@@ -220,17 +253,60 @@ export default function WriteupPage() {
             <span className="font-mono text-[10px] text-text3">{wordCount} words</span>
           </div>
 
-          <textarea
-            className="flex-1 p-6 font-mono text-[13px] text-text2 leading-[1.8] resize-none outline-none border-none"
-            style={{ background: 'var(--bg)', caretColor: 'var(--accent)' }}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            spellCheck={false}
-          />
+          {loadingArticle ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-text3 text-[12px] font-mono">Loading article…</div>
+            </div>
+          ) : (
+            <textarea
+              className="flex-1 p-6 font-mono text-[13px] text-text2 leading-[1.8] resize-none outline-none border-none"
+              style={{ background: 'var(--bg)', caretColor: 'var(--accent)' }}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              spellCheck={false}
+            />
+          )}
         </div>
 
         {/* Right panel */}
         <div className="w-[280px] flex flex-col flex-shrink-0 overflow-y-auto">
+          {/* Article metadata (when editing an existing article) */}
+          {loadedArticle && (
+            <div className="p-[14px]" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div className="text-[11px] font-[600] mb-[8px]">Article info</div>
+              <div className="flex flex-col gap-[4px]">
+                {loadedArticle.sourceName && (
+                  <div className="flex items-center gap-[6px] text-[10px]">
+                    <i className="ti ti-rss text-text3 text-[11px]" />
+                    <span className="text-text3">Source:</span>
+                    <span className="text-text2 truncate">{loadedArticle.sourceName}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-[6px] text-[10px]">
+                  <i className="ti ti-tag text-text3 text-[11px]" />
+                  <span className="text-text3">Category:</span>
+                  <span className="text-text2">{loadedArticle.category}</span>
+                </div>
+                <div className="flex items-center gap-[6px] text-[10px]">
+                  <i className="ti ti-circle-dot text-text3 text-[11px]" />
+                  <span className="text-text3">Status:</span>
+                  <span className="text-text2 capitalize">{loadedArticle.status?.toLowerCase()}</span>
+                </div>
+                {loadedArticle.sourceUrl && (
+                  <a
+                    href={loadedArticle.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-[6px] text-[10px] text-accent hover:underline mt-[2px]"
+                  >
+                    <i className="ti ti-external-link text-[11px]" />
+                    View original source
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Template selector */}
           <div className="p-[14px]" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="text-[11px] font-[600] mb-[8px]">Template</div>
@@ -258,14 +334,13 @@ export default function WriteupPage() {
                 <button
                   key={tool.key}
                   onClick={tool.action}
-                  disabled={aiWorking !== null}
+                  disabled={aiWorking !== null || loadingArticle}
                   className="flex items-center gap-[8px] px-[10px] py-[8px] rounded-[7px] text-[11px] text-text2 hover:text-text transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}>
                   <i className={`ti ${tool.icon} text-[13px]`} style={{ color: tool.color }} />
                   {aiWorking === tool.key ? 'Working…' : tool.label}
                 </button>
               ))}
-              {/* Non-wired tools */}
               {[
                 { icon: 'ti-sparkles', label: 'Expand section', color: 'var(--purple)' },
                 { icon: 'ti-scissors', label: 'Summarise',       color: 'var(--accent2)' },
@@ -303,5 +378,13 @@ export default function WriteupPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function WriteupPage() {
+  return (
+    <Suspense fallback={null}>
+      <WriteupContent />
+    </Suspense>
   );
 }
