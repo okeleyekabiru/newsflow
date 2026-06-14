@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api, apiFetch, type FeedPage } from '@/lib/api';
 
 interface NavItem {
   href: string;
@@ -15,32 +16,32 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Automation',
     items: [
-      { href: '/',         icon: 'ti-dashboard',      label: 'Dashboard' },
-      { href: '/feed',     icon: 'ti-rss',            label: 'Live feed',  badge: { text: '12', color: 'green' } },
-      { href: '/review',   icon: 'ti-shield-check',   label: 'Review queue', badge: { text: '3', color: 'red' } },
-      { href: '/scheduler',icon: 'ti-calendar-event', label: 'Scheduler' },
+      { href: '/',          icon: 'ti-dashboard',       label: 'Dashboard' },
+      { href: '/feed',      icon: 'ti-rss',             label: 'Live feed' },
+      { href: '/review',    icon: 'ti-shield-check',    label: 'Review queue' },
+      { href: '/scheduler', icon: 'ti-calendar-event',  label: 'Scheduler' },
     ],
   },
   {
     section: 'Content',
     items: [
-      { href: '/writeup',  icon: 'ti-pencil',         label: 'Write-up studio' },
-      { href: '/video',    icon: 'ti-player-play',    label: 'Video engine',  badge: { text: 'AI', color: 'purple' } },
+      { href: '/writeup',  icon: 'ti-pencil',          label: 'Write-up studio' },
+      { href: '/video',    icon: 'ti-player-play',     label: 'Video engine',  badge: { text: 'AI', color: 'purple' } },
     ],
   },
   {
     section: 'Distribution',
     items: [
-      { href: '/accounts',  icon: 'ti-users',         label: 'Accounts' },
-      { href: '/analytics', icon: 'ti-chart-bar',     label: 'Analytics' },
+      { href: '/accounts',  icon: 'ti-users',           label: 'Accounts' },
+      { href: '/analytics', icon: 'ti-chart-bar',       label: 'Analytics' },
       { href: '/monetize',  icon: 'ti-currency-dollar', label: 'Monetise' },
     ],
   },
   {
     section: 'System',
     items: [
-      { href: '/settings',  icon: 'ti-settings',      label: 'Settings' },
-      { href: '/profile',   icon: 'ti-user-circle',   label: 'Profile' },
+      { href: '/settings',  icon: 'ti-settings',        label: 'Settings' },
+      { href: '/profile',   icon: 'ti-user-circle',     label: 'Profile' },
     ],
   },
 ];
@@ -55,6 +56,19 @@ export default function Sidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [feedCount,   setFeedCount]   = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch feed total with perPage=1 to keep payload minimal
+    apiFetch<FeedPage>('/api/feed?perPage=1')
+      .then((p) => setFeedCount(p.total))
+      .catch(() => {});
+
+    api.getFlags()
+      .then((flags) => setReviewCount(flags.length))
+      .catch(() => {});
+  }, [pathname]); // re-fetch whenever the user navigates
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -119,6 +133,22 @@ export default function Sidebar() {
                   {active && <span className="nav-active-bar" />}
                   <i className={`ti ${icon} w-[15px] text-center text-[14px]`} />
                   <span className="flex-1">{label}</span>
+                  {/* Dynamic count badges */}
+                  {href === '/feed' && (
+                    <span className={`font-mono text-[9px] px-[5px] py-[1px] rounded-[10px] font-[600] ${
+                      feedCount > 0 ? 'bg-accent text-black' : 'text-text3 border border-border'
+                    }`}>
+                      {feedCount}
+                    </span>
+                  )}
+                  {href === '/review' && (
+                    <span className={`font-mono text-[9px] px-[5px] py-[1px] rounded-[10px] font-[600] ${
+                      reviewCount > 0 ? 'bg-red text-white' : 'text-text3 border border-border'
+                    }`}>
+                      {reviewCount}
+                    </span>
+                  )}
+                  {/* Static label badges (e.g. "AI") */}
                   {badge && (
                     <span
                       className={`font-mono text-[9px] px-[5px] py-[1px] rounded-[10px] font-[600] ${BADGE_COLORS[badge.color ?? 'green']}`}
