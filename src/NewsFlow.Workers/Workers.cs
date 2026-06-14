@@ -121,11 +121,13 @@ public class IngestWorker : BackgroundService
         FetchStoriesAsync(Source source, CancellationToken ct)
     {
         var feed = await FeedReader.ReadAsync(source.Url);
-        var cutoff = DateTime.UtcNow.AddHours(-2);
+        var cutoff = DateTime.UtcNow.AddHours(-24);
 
+        // Accept items with no date so feeds that omit PublishingDate still work.
         return feed.Items
-            .Where(item => item.PublishingDate.HasValue && item.PublishingDate.Value.ToUniversalTime() >= cutoff)
-            .Take(10)
+            .Where(item => !item.PublishingDate.HasValue ||
+                           item.PublishingDate.Value.ToUniversalTime() >= cutoff)
+            .Take(20)
             .Select(item =>
             {
                 var raw = string.IsNullOrWhiteSpace(item.Content)

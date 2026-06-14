@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using NewsFlow.Core.Entities;
+using NewsFlow.Core.Interfaces;
 
 // 'User' inside a ControllerBase subclass resolves to the ClaimsPrincipal property.
 // Alias our entity to avoid that ambiguity.
@@ -24,21 +26,35 @@ public class AuthController : ControllerBase
     private const string TokenProvider = "NewsFlow";
     private const string RefreshTokenName = "RefreshToken";
 
+    // Default RSS sources every new user starts with so the ingest worker has
+    // something to pull from immediately after registration.
+    private static readonly (string Name, string Url)[] DefaultSources =
+    [
+        ("BBC News",       "https://feeds.bbci.co.uk/news/world/rss.xml"),
+        ("The Guardian",   "https://www.theguardian.com/world/rss"),
+        ("NPR News",       "https://feeds.npr.org/1001/rss.xml"),
+        ("Reuters",        "https://feeds.reuters.com/reuters/topNews"),
+        ("Al Jazeera",     "https://www.aljazeera.com/xml/rss/all.xml"),
+    ];
+
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthController> _logger;
+    private readonly IUnitOfWork _uow;
 
     public AuthController(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IConfiguration config,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IUnitOfWork uow)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _config = config;
         _logger = logger;
+        _uow = uow;
     }
 
     /// <summary>POST /api/auth/register — create account and return JWT + refresh token.</summary>
@@ -55,8 +71,11 @@ public class AuthController : ControllerBase
             return BadRequest(new { errors = identityResult.Errors.Select(e => e.Description) });
 
         var user = userResult.Value;
-        var tokens = await IssueTokensAsync(user);
 
+        // Seed default RSS sources so the ingest worker has feeds to pull immediately
+        await SeedDefaultSourcesAsync(user.Id, ct);
+
+        var tokens = await IssueTokensAsync(user);
         _logger.LogInformation("User registered: {Email}", user.Email);
         return Ok(tokens);
     }
@@ -124,6 +143,18 @@ public class AuthController : ControllerBase
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private async Task SeedDefaultSourcesAsync(Guid userId, CancellationToken ct)
+    {
+        foreach (var (name, url) in DefaultSources)
+        {
+            var result = Source.Create(userId, name, url, "RSS");
+            if (result.IsSuccess)
+                await _uow.Sources.AddAsync(result.Value, ct);
+        }
+        await _uow.CommitAsync(ct);
+        _logger.LogInformation("Seeded {Count} default sources for user {UserId}", DefaultSources.Length, userId);
+    }
 
     /// <summary>Generates a JWT + refresh token pair and stores the refresh token in Identity.</summary>
     private async Task<AuthTokens> IssueTokensAsync(AppUser user)
