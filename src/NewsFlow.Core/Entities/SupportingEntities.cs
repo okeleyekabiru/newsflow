@@ -143,6 +143,7 @@ public class Source : BaseEntity
 
     public void MarkTrusted() { IsTrusted = true; Touch(); }
     public void MarkFetched() { LastFetchedAt = DateTime.UtcNow; Touch(); }
+    public void Activate()   { IsActive = true;  Touch(); }
     public void Deactivate() { IsActive = false; Touch(); }
 }
 

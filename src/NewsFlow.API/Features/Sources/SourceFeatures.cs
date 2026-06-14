@@ -13,6 +13,8 @@ public record AddSourceCommand(Guid UserId, string Name, string Url, string Type
 
 public record RemoveSourceCommand(Guid SourceId, Guid UserId) : IRequest<Result>;
 
+public record ToggleSourceCommand(Guid SourceId, Guid UserId) : IRequest<Result<bool>>;
+
 public record TrustSourceCommand(Guid SourceId, Guid UserId) : IRequest<Result>;
 
 public record SourceDto(
@@ -28,7 +30,8 @@ public class GetSourcesHandler : IRequestHandler<GetSourcesQuery, Result<IEnumer
 
     public async Task<Result<IEnumerable<SourceDto>>> Handle(GetSourcesQuery q, CancellationToken ct)
     {
-        var sources = await _uow.Sources.GetActiveByUserIdAsync(q.UserId, ct);
+        // Return all sources (active and inactive) so the UI can show toggles.
+        var sources = await _uow.Sources.GetAllByUserIdAsync(q.UserId, ct);
         return Result.Success(sources.Select(s =>
             new SourceDto(s.Id, s.Name, s.Url, s.Type, s.IsActive, s.IsTrusted, s.LastFetchedAt)));
     }
@@ -65,6 +68,24 @@ public class RemoveSourceHandler : IRequestHandler<RemoveSourceCommand, Result>
         _uow.Sources.Update(source);
         await _uow.CommitAsync(ct);
         return Result.Success();
+    }
+}
+
+public class ToggleSourceHandler : IRequestHandler<ToggleSourceCommand, Result<bool>>
+{
+    private readonly IUnitOfWork _uow;
+    public ToggleSourceHandler(IUnitOfWork uow) => _uow = uow;
+
+    public async Task<Result<bool>> Handle(ToggleSourceCommand cmd, CancellationToken ct)
+    {
+        var source = await _uow.Sources.GetByIdAsync(cmd.SourceId, ct);
+        if (source is null) return Result.Failure<bool>("Source not found.");
+        if (source.UserId != cmd.UserId) return Result.Failure<bool>("Unauthorized.");
+
+        if (source.IsActive) source.Deactivate(); else source.Activate();
+        _uow.Sources.Update(source);
+        await _uow.CommitAsync(ct);
+        return Result.Success(source.IsActive);
     }
 }
 

@@ -60,6 +60,7 @@ public interface IUserSettingsRepository : IRepository<UserSettings>
 public interface ISourceRepository : IRepository<Source>
 {
     Task<IEnumerable<Source>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default);
+    Task<IEnumerable<Source>> GetAllByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<IEnumerable<Source>> GetAllActiveAsync(CancellationToken ct = default);
 }
 

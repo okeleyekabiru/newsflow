@@ -124,6 +124,9 @@ public class SourceRepository : Repository<Source>, ISourceRepository
     public async Task<IEnumerable<Source>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct = default) =>
         await Set.Where(s => s.UserId == userId && s.IsActive).ToListAsync(ct);
 
+    public async Task<IEnumerable<Source>> GetAllByUserIdAsync(Guid userId, CancellationToken ct = default) =>
+        await Set.Where(s => s.UserId == userId).OrderBy(s => s.Name).ToListAsync(ct);
+
     public async Task<IEnumerable<Source>> GetAllActiveAsync(CancellationToken ct = default) =>
         await Set.Where(s => s.IsActive).ToListAsync(ct);
 }

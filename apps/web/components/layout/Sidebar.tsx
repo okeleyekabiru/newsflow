@@ -18,6 +18,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     items: [
       { href: '/',          icon: 'ti-dashboard',       label: 'Dashboard' },
       { href: '/feed',      icon: 'ti-rss',             label: 'Live feed' },
+      { href: '/sources',   icon: 'ti-broadcast',       label: 'Feed sources' },
       { href: '/review',    icon: 'ti-shield-check',    label: 'Review queue' },
       { href: '/scheduler', icon: 'ti-calendar-event',  label: 'Scheduler' },
     ],

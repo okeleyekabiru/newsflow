@@ -52,6 +52,16 @@ export interface Account {
   active: boolean;
 }
 
+export interface Source {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  isActive: boolean;
+  isTrusted: boolean;
+  lastFetchedAt: string | null;
+}
+
 export interface FeedItem {
   id: string;
   title: string;
@@ -254,8 +264,10 @@ export const api = {
   getRevenue:  (from: string, to: string) => apiFetch<unknown>(`/api/analytics/revenue?from=${from}&to=${to}`),
 
   // Sources
-  getSources:  ()             => apiFetch<unknown[]>('/api/sources'),
-  addSource:   (data: object) => apiFetch<{ id: string }>('/api/sources', { method: 'POST', body: JSON.stringify(data) }),
-  removeSource:(id: string)   => apiFetch<void>(`/api/sources/${id}`, { method: 'DELETE' }),
-  trustSource: (id: string)   => apiFetch<unknown>(`/api/sources/${id}/trust`, { method: 'PATCH' }),
+  getSources:   () => apiFetch<Source[]>('/api/sources'),
+  addSource:    (name: string, url: string, type: string) =>
+    apiFetch<{ id: string }>('/api/sources', { method: 'POST', body: JSON.stringify({ name, url, type }) }),
+  removeSource: (id: string) => apiFetch<void>(`/api/sources/${id}`, { method: 'DELETE' }),
+  toggleSource: (id: string) => apiFetch<{ isActive: boolean }>(`/api/sources/${id}/toggle`, { method: 'PATCH' }),
+  trustSource:  (id: string) => apiFetch<void>(`/api/sources/${id}/trust`, { method: 'PATCH' }),
 };

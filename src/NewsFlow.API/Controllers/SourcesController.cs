@@ -44,6 +44,16 @@ public class SourcesController : ControllerBase
         return result.IsSuccess ? NoContent() : BadRequest(result.Error);
     }
 
+    /// <summary>PATCH /api/sources/{id}/toggle — enable or disable a source.</summary>
+    [HttpPatch("{id:guid}/toggle")]
+    public async Task<IActionResult> Toggle(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ToggleSourceCommand(id, UserId), ct);
+        return result.IsSuccess
+            ? Ok(new { isActive = result.Value })
+            : BadRequest(result.Error);
+    }
+
     /// <summary>PATCH /api/sources/{id}/trust — mark a source as trusted.</summary>
     [HttpPatch("{id:guid}/trust")]
     public async Task<IActionResult> Trust(Guid id, CancellationToken ct)
