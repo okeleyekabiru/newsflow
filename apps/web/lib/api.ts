@@ -11,13 +11,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 export interface Flag {
   id: string;
   title: string;
-  source: string;
-  /** ISO timestamp or relative string returned by API */
-  time: string;
-  category: string;
-  severity: number;
   reason: string;
-  sourceUrl?: string;
+  severity: number;
+  category: string;
+  triggerKeywords: string[];
+  source: string;
+  sourceUrl: string | null;
+  status: string;
+  time: string; // ISO datetime
 }
 
 export interface Article {

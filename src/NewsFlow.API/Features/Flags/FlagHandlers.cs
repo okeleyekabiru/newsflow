@@ -24,9 +24,16 @@ public record GetFlagDetailQuery(Guid FlagId, Guid UserId) : IRequest<Result<Fla
 public record GetFlagRulesQuery(Guid UserId) : IRequest<Result<IEnumerable<FlagRuleDto>>>;
 
 public record FlagDto(
-    Guid Id, string ArticleTitle, string FlagReason,
-    int SeverityScore, string Category, string[] TriggerKeywords,
-    string SourceName, string Status, DateTime CreatedAt);
+    Guid Id,
+    string Title,           // articleTitle → title
+    string Reason,          // flagReason   → reason
+    int Severity,           // severityScore→ severity
+    string Category,
+    string[] TriggerKeywords,
+    string Source,          // sourceName   → source
+    string? SourceUrl,      // article.SourceUrl → sourceUrl
+    string Status,
+    DateTime Time);         // createdAt    → time
 
 public record FlagDetailDto(
     Guid Id, string ArticleTitle, string ContentMd, string FlagReason,
@@ -180,9 +187,16 @@ public class GetPendingFlagsHandler : IRequestHandler<GetPendingFlagsQuery, Resu
         var pending = flags.Where(f => f.Status == FlagStatus.Pending)
             .OrderByDescending(f => f.SeverityScore)
             .Select(f => new FlagDto(
-                f.Id, f.Article.Title, f.FlagReason, f.SeverityScore,
-                f.Category.ToString(), f.TriggerKeywords,
-                f.SourceName, f.Status.ToString(), f.CreatedAt));
+                f.Id,
+                f.Article.Title,
+                f.FlagReason,
+                f.SeverityScore,
+                f.Category.ToString(),
+                f.TriggerKeywords,
+                f.SourceName,
+                f.Article.SourceUrl,
+                f.Status.ToString(),
+                f.CreatedAt));
 
         return Result.Success(pending);
     }

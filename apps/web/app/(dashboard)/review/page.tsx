@@ -5,6 +5,14 @@ import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import { api, type Flag } from '@/lib/api';
 
+function relativeTime(iso: string) {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  if (m < 1440) return `${Math.floor(m / 60)}h ago`;
+  return `${Math.floor(m / 1440)}d ago`;
+}
+
 export default function ReviewPage() {
   const [queue, setQueue] = useState<Flag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +44,7 @@ export default function ReviewPage() {
     <>
       <Topbar title="Review queue">
         <span className="font-mono text-[10px] text-yellow bg-[rgba(255,183,0,0.10)] border border-[rgba(255,183,0,0.3)] px-[8px] py-[3px] rounded-[20px]">
-          {queue.length} items pending
+          {queue.length} pending
         </span>
       </Topbar>
 
@@ -50,9 +58,7 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        {loading && (
-          <div className="text-text3 text-[12px] font-mono py-4">Loading queue…</div>
-        )}
+        {loading && <div className="text-text3 text-[12px] font-mono py-4">Loading queue…</div>}
         {error && (
           <div className="text-[12px] p-[10px] rounded-[8px]"
             style={{ background: 'rgba(255,69,96,.1)', border: '1px solid rgba(255,69,96,.3)', color: 'var(--red)' }}>
@@ -71,25 +77,45 @@ export default function ReviewPage() {
           return (
             <div key={item.id} className="rounded-[9px] p-[12px]"
               style={{ background: 'var(--bg3)', border: '1px solid var(--border)' }}>
+
+              {/* Header row */}
               <div className="flex items-start justify-between gap-[8px] mb-[4px]">
                 <div className="text-[12px] font-[500] text-text leading-[1.4]">{item.title}</div>
                 <Badge variant={sevVariant as 'sev-high' | 'sev-mid'}>Sev {item.severity}/10</Badge>
               </div>
+
+              {/* Meta row */}
               <div className="text-[10px] text-text3 font-mono mb-[8px]">
-                {item.source} · {item.time} · {item.category}
+                {item.source} · {relativeTime(item.time)} · {item.category}
               </div>
-              <div className="text-[11px] text-text2 mb-[10px] p-[8px] rounded-[7px]"
+
+              {/* Reason + trigger keywords */}
+              <div className="text-[11px] text-text2 mb-[6px] p-[8px] rounded-[7px]"
                 style={{ background: 'var(--bg2)', border: '1px solid var(--border)' }}>
                 <i className="ti ti-info-circle text-text3 mr-[5px]" />
                 {item.reason}
               </div>
+
+              {item.triggerKeywords?.length > 0 && (
+                <div className="flex flex-wrap gap-[4px] mb-[10px]">
+                  {item.triggerKeywords.map((kw) => (
+                    <span key={kw}
+                      className="text-[9px] font-mono px-[6px] py-[2px] rounded-[4px]"
+                      style={{ background: 'rgba(255,183,0,.1)', color: 'var(--yellow)', border: '1px solid rgba(255,183,0,.25)' }}>
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions */}
               <div className="flex gap-[6px]">
                 <button
                   onClick={() => act(item.id, 'approve')}
                   disabled={busy}
                   className="text-[10px] px-[10px] py-[4px] rounded-[6px] font-[500] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(0,229,160,.15)', color: 'var(--accent)', border: '1px solid rgba(0,229,160,.3)' }}>
-                  <i className="ti ti-check mr-[4px]" />{busy && acting === item.id ? 'Working…' : 'Approve & post'}
+                  <i className="ti ti-check mr-[4px]" />{busy ? 'Working…' : 'Approve & post'}
                 </button>
                 <button
                   onClick={() => act(item.id, 'reject')}
