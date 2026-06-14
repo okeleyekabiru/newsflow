@@ -45,8 +45,8 @@ public class ArticleRepository : Repository<Article>, IArticleRepository
     public async Task<IEnumerable<Article>> GetByCategoryAsync(ArticleCategory category, CancellationToken ct = default) =>
         await Set.Where(a => a.Category == category).ToListAsync(ct);
 
-    public Task<bool> ExistsByTitleAsync(string title, CancellationToken ct = default) =>
-        Set.AnyAsync(a => a.Title == title, ct);
+    public Task<bool> ExistsByTitleAsync(string title, Guid userId, CancellationToken ct = default) =>
+        Set.AnyAsync(a => a.Title == title && a.UserId == userId, ct);
 }
 
 public class PostRepository : Repository<Post>, IPostRepository

@@ -47,7 +47,7 @@ public class DuplicateCheckHandler : IngestHandler
 
     protected override async Task ProcessAsync(IngestContext context, CancellationToken ct)
     {
-        if (await _uow.Articles.ExistsByTitleAsync(context.RawTitle, ct))
+        if (await _uow.Articles.ExistsByTitleAsync(context.RawTitle, context.UserId, ct))
         {
             context.ShouldStop = true;
             context.StopReason = "Duplicate article detected.";
