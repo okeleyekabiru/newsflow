@@ -274,6 +274,7 @@ export const api = {
 
   // Accounts
   getAccounts:      () => apiFetch<Account[]>('/api/accounts'),
+  getOAuthPreAuth:  () => apiFetch<{ token: string }>('/api/oauth/pre-auth', { method: 'POST' }),
   connectAccount:   (data: object) => apiFetch<{ id: string }>('/api/accounts', { method: 'POST', body: JSON.stringify(data) }),
   disconnectAccount:(id: string)   => apiFetch<void>(`/api/accounts/${id}`, { method: 'DELETE' }),
 

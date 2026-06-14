@@ -11,6 +11,8 @@ using NewsFlow.Workers;
 using Serilog;
 
 var host = Host.CreateDefaultBuilder(args)
+    .ConfigureAppConfiguration((ctx, cfg) =>
+        cfg.AddJsonFile("secrets.json", optional: true, reloadOnChange: false))
     .UseSerilog((ctx, cfg) => cfg
         .ReadFrom.Configuration(ctx.Configuration)
         .Enrich.FromLogContext()

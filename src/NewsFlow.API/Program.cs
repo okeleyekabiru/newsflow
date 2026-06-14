@@ -66,6 +66,9 @@ var retryPolicy = NewRetryPolicy();   // shared (stateless)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load secrets.json if present (gitignored — never committed)
+builder.Configuration.AddJsonFile("secrets.json", optional: true, reloadOnChange: false);
+
 builder.Services.AddControllers()
     .AddJsonOptions(o =>
         o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));

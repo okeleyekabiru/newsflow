@@ -14,18 +14,51 @@ const PLATFORM_META: Record<string, { icon: string; style: string; label: string
 
 const CONNECT_PLATFORMS = ['tiktok', 'twitter', 'instagram', 'youtube'] as const;
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [removing, setRemoving] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const [toast, setToast]       = useState('');
 
   useEffect(() => {
     api.getAccounts()
       .then(setAccounts)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Show success toast after OAuth redirect back
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const oauthError = params.get('error');
+    if (connected) {
+      const label = PLATFORM_META[connected]?.label ?? connected;
+      showToast(`${label} connected successfully!`);
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (oauthError) {
+      showToast(`Connection failed: ${oauthError}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 4000);
+  }
+
+  async function connectPlatform(platform: string) {
+    setConnecting(platform);
+    try {
+      const { token } = await api.getOAuthPreAuth();
+      window.location.href = `${API_BASE}/api/oauth/${platform}/connect?pre=${token}`;
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to start OAuth flow');
+      setConnecting(null);
+    }
+  }
 
   async function disconnect(id: string) {
     if (!confirm('Disconnect this account?')) return;
@@ -34,7 +67,7 @@ export default function AccountsPage() {
       await api.disconnectAccount(id);
       setAccounts((prev) => prev.filter((a) => a.id !== id));
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Failed to disconnect');
+      showToast(e instanceof Error ? e.message : 'Failed to disconnect');
     } finally {
       setRemoving(null);
     }
@@ -46,20 +79,16 @@ export default function AccountsPage() {
     );
   }
 
-  function connectPlatform(platform: string) {
-    alert(`OAuth flow for ${PLATFORM_META[platform]?.label ?? platform} is not yet configured. Add credentials in Settings.`);
-  }
-
   return (
     <>
-      <Topbar title="Connected accounts">
-        <button
-          onClick={() => alert('To connect a new account, use one of the platform buttons below.')}
-          className="flex items-center gap-[5px] px-[11px] py-[6px] rounded-btn text-[11px] font-[500] text-black"
-          style={{ background: 'var(--accent)' }}>
-          <i className="ti ti-plus" /> Connect account
-        </button>
-      </Topbar>
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-[8px] text-[12px] font-[500]"
+          style={{ background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text)' }}>
+          {toast}
+        </div>
+      )}
+
+      <Topbar title="Connected accounts" />
 
       <div className="flex-1 overflow-y-auto p-[18px_20px] flex flex-col gap-[14px]">
         <Panel title="Social accounts" icon="ti-users">
@@ -71,7 +100,9 @@ export default function AccountsPage() {
             </div>
           )}
           {!loading && !error && accounts.length === 0 && (
-            <div className="text-text3 text-[12px] font-mono py-2">No accounts connected yet.</div>
+            <div className="text-text3 text-[12px] font-mono py-2">
+              No accounts connected yet. Use the buttons below to connect a platform.
+            </div>
           )}
 
           <div className="flex flex-col divide-y divide-border">
@@ -129,23 +160,36 @@ export default function AccountsPage() {
         </Panel>
 
         {/* Platform connect buttons */}
-        <div className="grid grid-cols-4 gap-[10px]">
-          {CONNECT_PLATFORMS.map((platform) => {
-            const meta = PLATFORM_META[platform];
-            return (
-              <button
-                key={platform}
-                onClick={() => connectPlatform(platform)}
-                className="flex flex-col items-center gap-[8px] p-[16px] rounded-card cursor-pointer hover:border-border2 transition-all text-[12px] font-[500]"
-                style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
-                <div className={`w-10 h-10 rounded-[9px] flex items-center justify-center ${meta.style}`}>
-                  <i className={`ti ${meta.icon} text-white text-[18px]`} />
-                </div>
-                Connect {meta.label}
-              </button>
-            );
-          })}
-        </div>
+        <Panel title="Connect a platform" icon="ti-plug">
+          <div className="grid grid-cols-4 gap-[10px]">
+            {CONNECT_PLATFORMS.map((platform) => {
+              const meta = PLATFORM_META[platform];
+              const isConnected = accounts.some((a) => a.platform === platform && a.active);
+              const isBusy = connecting === platform;
+              return (
+                <button
+                  key={platform}
+                  onClick={() => connectPlatform(platform)}
+                  disabled={isBusy}
+                  className="flex flex-col items-center gap-[8px] p-[16px] rounded-card cursor-pointer hover:border-border2 transition-all text-[12px] font-[500] disabled:opacity-60 disabled:cursor-wait"
+                  style={{ background: 'var(--card)', border: '1px solid var(--border)' }}>
+                  <div className={`w-10 h-10 rounded-[9px] flex items-center justify-center ${meta.style} relative`}>
+                    <i className={`ti ${isBusy ? 'ti-loader-2' : meta.icon} text-white text-[18px]`} />
+                    {isConnected && !isBusy && (
+                      <div className="absolute -top-1 -right-1 w-[14px] h-[14px] rounded-full bg-[var(--accent)] flex items-center justify-center">
+                        <i className="ti ti-check text-black text-[8px]" />
+                      </div>
+                    )}
+                  </div>
+                  {isBusy ? 'Redirecting…' : isConnected ? `Reconnect ${meta.label}` : `Connect ${meta.label}`}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-text3 mt-[10px] font-mono">
+            You will be redirected to the platform to authorise NewsFlow. Make sure credentials are configured in Settings → Platforms.
+          </p>
+        </Panel>
       </div>
     </>
   );
