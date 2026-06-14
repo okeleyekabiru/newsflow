@@ -155,7 +155,13 @@ public class IngestWorker : BackgroundService
     /// </summary>
     private async Task<string> FetchFullContentAsync(string? url, string fallback, CancellationToken ct)
     {
-        if (fallback.Length >= 300 || string.IsNullOrWhiteSpace(url)) return fallback;
+        if (string.IsNullOrWhiteSpace(url)) return fallback;
+
+        var truncated = fallback.Contains("Continue reading", StringComparison.OrdinalIgnoreCase) ||
+                        fallback.Contains("Read more", StringComparison.OrdinalIgnoreCase) ||
+                        fallback.EndsWith("…", StringComparison.Ordinal);
+
+        if (fallback.Length >= 300 && !truncated) return fallback;
 
         try
         {
