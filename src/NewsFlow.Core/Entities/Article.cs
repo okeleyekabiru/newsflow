@@ -14,6 +14,8 @@ public class Article : BaseEntity
     public ArticleTemplate Template { get; private set; } = ArticleTemplate.BreakingNews;
     public string? SourceName { get; private set; }
     public string? SourceUrl { get; private set; }
+    public string? ThumbnailUrl { get; private set; }
+    public string? VideoUrl { get; private set; }
     public int WordCount { get; private set; }
 
     private readonly List<ArticleVersion> _versions = [];
@@ -84,6 +86,13 @@ public class Article : BaseEntity
         SourceName = name;
         SourceUrl = url;
         Touch();
+    }
+
+    public void SetMedia(string? thumbnailUrl, string? videoUrl)
+    {
+        ThumbnailUrl = thumbnailUrl;
+        VideoUrl = videoUrl;
+        if (thumbnailUrl is not null || videoUrl is not null) Touch();
     }
 
     private void SaveVersion()

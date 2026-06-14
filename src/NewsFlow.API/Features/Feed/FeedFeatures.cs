@@ -18,7 +18,8 @@ public record GetFeedQuery(
 
 public record FeedItemDto(
     Guid Id, string Title, string Status, string Category,
-    string Template, int WordCount, string? SourceName, DateTime UpdatedAt);
+    string Template, int WordCount, string? SourceName, DateTime UpdatedAt,
+    string? ThumbnailUrl, string? VideoUrl);
 
 public record FeedPageDto(IEnumerable<FeedItemDto> Items, int Total, int Page, int PerPage);
 
@@ -31,7 +32,7 @@ public class GetFeedHandler : IRequestHandler<GetFeedQuery, Result<FeedPageDto>>
 
     public async Task<Result<FeedPageDto>> Handle(GetFeedQuery q, CancellationToken ct)
     {
-        var all = (await _uow.Articles.GetByUserIdAsync(q.UserId, ct)).ToList();
+        var all = (await _uow.Articles.GetFeedArticlesAsync(q.UserId, ct)).ToList();
 
         if (q.StatusFilter.HasValue)
             all = all.Where(a => a.Status == q.StatusFilter.Value).ToList();
@@ -45,7 +46,8 @@ public class GetFeedHandler : IRequestHandler<GetFeedQuery, Result<FeedPageDto>>
             .Take(q.PerPage)
             .Select(a => new FeedItemDto(
                 a.Id, a.Title, a.Status.ToString(), a.Category.ToString(),
-                a.Template.ToString(), a.WordCount, a.SourceName, a.UpdatedAt));
+                a.Template.ToString(), a.WordCount, a.SourceName, a.UpdatedAt,
+                a.ThumbnailUrl, a.VideoUrl));
 
         return Result.Success(new FeedPageDto(items, total, q.Page, q.PerPage));
     }

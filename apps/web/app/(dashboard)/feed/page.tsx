@@ -158,21 +158,49 @@ export default function FeedPage() {
               const ic = itemIcon(item);
               const isDraft = item.status?.toLowerCase() === 'draft';
               const isBusy = posting.has(item.id);
+              const hasThumb = !!item.thumbnailUrl;
+              const hasVideo = !!item.videoUrl;
 
               return (
                 <div
                   key={item.id}
-                  className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0"
+                  onClick={() => router.push(`/feed/${item.id}`)}
+                  className="flex gap-[10px] py-[10px] first:pt-0 last:pb-0 cursor-pointer hover:bg-white/[0.02] -mx-[14px] px-[14px] rounded-[7px] transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-[7px] flex items-center justify-center flex-shrink-0 mt-[2px]"
-                    style={{ background: ic.bg }}>
-                    <i className={`ti ${ic.icon} text-[14px]`} style={{ color: ic.color }} />
-                  </div>
+                  {/* Thumbnail or category icon */}
+                  {hasThumb ? (
+                    <div className="relative w-[52px] h-[38px] rounded-[6px] overflow-hidden flex-shrink-0 mt-[2px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.thumbnailUrl!}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                      {hasVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center"
+                          style={{ background: 'rgba(0,0,0,.45)' }}>
+                          <i className="ti ti-player-play-filled text-white text-[14px]" />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-[7px] flex items-center justify-center flex-shrink-0 mt-[2px]"
+                      style={{ background: ic.bg }}>
+                      <i className={`ti ${ic.icon} text-[14px]`} style={{ color: ic.color }} />
+                    </div>
+                  )}
+
                   <div className="flex-1 min-w-0">
                     <div className="text-[12px] font-[500] leading-[1.4] mb-[3px] text-text">{item.title}</div>
                     <div className="flex items-center gap-[6px] text-[10px] text-text3 font-mono flex-wrap mb-[2px]">
                       <span>{item.sourceName ?? item.category}</span><span>·</span>
                       <span>{relativeTime(item.updatedAt)}</span>
+                      {hasVideo && (
+                        <span className="flex items-center gap-[3px]" style={{ color: 'var(--accent2)' }}>
+                          <i className="ti ti-player-play text-[9px]" />video
+                        </span>
+                      )}
                       <ItemBadges item={item} />
                     </div>
 
@@ -180,20 +208,40 @@ export default function FeedPage() {
                     {isDraft && (
                       <div className="flex gap-[5px] mt-[6px]">
                         <button
-                          onClick={() => router.push(`/writeup?id=${item.id}`)}
+                          onClick={(e: { stopPropagation(): void }) => { e.stopPropagation(); router.push(`/writeup?id=${item.id}`); }}
                           className="flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px] cursor-pointer"
                           style={{ background: 'var(--bg2)', color: 'var(--text2)', border: '1px solid var(--border)' }}
                         >
                           <i className="ti ti-pencil text-[10px]" /> Edit
                         </button>
                         <button
-                          onClick={() => postDraft(item.id)}
+                          onClick={(e: { stopPropagation(): void }) => { e.stopPropagation(); postDraft(item.id); }}
                           disabled={isBusy}
                           className="flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px] cursor-pointer disabled:opacity-50"
                           style={{ background: 'rgba(0,229,160,.12)', color: 'var(--accent)', border: '1px solid rgba(0,229,160,.3)' }}
                         >
                           <i className="ti ti-send text-[10px]" /> {isBusy ? 'Posting…' : 'Post directly'}
                         </button>
+                        {hasVideo && (
+                          <a href={item.videoUrl!} target="_blank" rel="noopener noreferrer"
+                            onClick={(e: { stopPropagation(): void }) => e.stopPropagation()}
+                            className="flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px]"
+                            style={{ background: 'rgba(0,136,255,.1)', color: 'var(--accent2)', border: '1px solid rgba(0,136,255,.25)' }}
+                          >
+                            <i className="ti ti-player-play text-[10px]" /> Watch
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {!isDraft && hasVideo && (
+                      <div className="mt-[5px]">
+                        <a href={item.videoUrl!} target="_blank" rel="noopener noreferrer"
+                          onClick={(e: { stopPropagation(): void }) => e.stopPropagation()}
+                          className="inline-flex items-center gap-[4px] text-[10px] px-[8px] py-[3px] rounded-[5px]"
+                          style={{ background: 'rgba(0,136,255,.1)', color: 'var(--accent2)', border: '1px solid rgba(0,136,255,.25)' }}
+                        >
+                          <i className="ti ti-player-play text-[10px]" /> Watch video
+                        </a>
                       </div>
                     )}
                   </div>

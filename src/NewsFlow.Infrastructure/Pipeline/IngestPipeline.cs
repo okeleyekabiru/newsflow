@@ -10,7 +10,9 @@ public record IngestContext(
     string RawContent,
     string SourceName,
     string SourceUrl,
-    Guid UserId)
+    Guid UserId,
+    string? ThumbnailUrl = null,
+    string? VideoUrl = null)
 {
     public Article? Article { get; set; }
     public bool ShouldStop { get; set; }
@@ -108,6 +110,7 @@ public class CategoryHandler : IngestHandler
                 {
                     context.Article = articleResult.Value;
                     context.Article.SetSource(context.SourceName, context.SourceUrl);
+                    context.Article.SetMedia(context.ThumbnailUrl, context.VideoUrl);
                 }
                 return Task.CompletedTask;
             }

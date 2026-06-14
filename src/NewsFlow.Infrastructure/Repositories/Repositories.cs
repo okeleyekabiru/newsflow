@@ -39,6 +39,14 @@ public class ArticleRepository : Repository<Article>, IArticleRepository
                  .OrderByDescending(a => a.UpdatedAt)
                  .ToListAsync(ct);
 
+    public async Task<IEnumerable<Article>> GetFeedArticlesAsync(Guid userId, CancellationToken ct = default) =>
+        await Set
+            .Where(a => a.UserId == userId)
+            .Where(a => a.SourceName == null ||
+                        Db.Set<Source>().Any(s => s.UserId == userId && s.IsActive && s.Name == a.SourceName))
+            .OrderByDescending(a => a.UpdatedAt)
+            .ToListAsync(ct);
+
     public Task<Article?> GetWithVersionsAsync(Guid id, CancellationToken ct = default) =>
         Set.Include(a => a.Versions).FirstOrDefaultAsync(a => a.Id == id, ct);
 

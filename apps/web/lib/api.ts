@@ -45,6 +45,8 @@ export interface Article {
   updatedAt: string;
   sourceName: string | null;
   sourceUrl: string | null;
+  thumbnailUrl: string | null;
+  videoUrl: string | null;
 }
 
 export interface OverviewStats {
@@ -85,6 +87,8 @@ export interface FeedItem {
   status: string;
   wordCount?: number;
   template?: string;
+  thumbnailUrl?: string | null;
+  videoUrl?: string | null;
 }
 
 export interface FeedPage {

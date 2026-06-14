@@ -132,7 +132,8 @@ public class GetArticleHandler : IRequestHandler<GetArticleQuery, Result<Article
             article.Id, article.Title, article.ContentMd,
             article.Status.ToString(), article.Category.ToString(),
             article.Template.ToString(), article.WordCount, article.UpdatedAt,
-            article.SourceName, article.SourceUrl));
+            article.SourceName, article.SourceUrl,
+            article.ThumbnailUrl, article.VideoUrl));
     }
 }
 
@@ -148,7 +149,7 @@ public class GetArticlesHandler : IRequestHandler<GetArticlesQuery, Result<IEnum
         var dtos = articles.Select(a => new ArticleDto(
             a.Id, a.Title, a.ContentMd, a.Status.ToString(),
             a.Category.ToString(), a.Template.ToString(), a.WordCount, a.UpdatedAt,
-            a.SourceName, a.SourceUrl));
+            a.SourceName, a.SourceUrl, a.ThumbnailUrl, a.VideoUrl));
 
         return Result.Success(dtos);
     }

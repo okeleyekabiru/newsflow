@@ -21,6 +21,11 @@ public interface IUserRepository : IRepository<User>
 public interface IArticleRepository : IRepository<Article>
 {
     Task<IEnumerable<Article>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+    /// <summary>
+    /// Feed-specific query: excludes articles from sources that are currently disabled.
+    /// Articles with no SourceName (manually created) are always included.
+    /// </summary>
+    Task<IEnumerable<Article>> GetFeedArticlesAsync(Guid userId, CancellationToken ct = default);
     Task<Article?> GetWithVersionsAsync(Guid id, CancellationToken ct = default);
     Task<IEnumerable<Article>> GetByCategoryAsync(ArticleCategory category, CancellationToken ct = default);
     Task<bool> ExistsByTitleAsync(string title, Guid userId, CancellationToken ct = default);

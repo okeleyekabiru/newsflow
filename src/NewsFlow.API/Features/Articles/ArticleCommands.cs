@@ -42,7 +42,9 @@ public record ArticleDto(
     int WordCount,
     DateTime UpdatedAt,
     string? SourceName,
-    string? SourceUrl);
+    string? SourceUrl,
+    string? ThumbnailUrl,
+    string? VideoUrl);
 
 public record ArticleVersionDto(
     Guid Id,

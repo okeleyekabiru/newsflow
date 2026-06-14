@@ -269,6 +269,12 @@ namespace NewsFlow.Infrastructure.Migrations
                     b.Property<string>("SourceUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("ThumbnailUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VideoUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("text");

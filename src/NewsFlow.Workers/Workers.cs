@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using CodeHollow.FeedReader;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Configuration;
@@ -17,12 +18,14 @@ public class IngestWorker : BackgroundService
 {
     private readonly IServiceProvider _provider;
     private readonly ILogger<IngestWorker> _logger;
+    private readonly IHttpClientFactory _http;
     private readonly TimeSpan _interval = TimeSpan.FromMinutes(5);
 
-    public IngestWorker(IServiceProvider provider, ILogger<IngestWorker> logger)
+    public IngestWorker(IServiceProvider provider, ILogger<IngestWorker> logger, IHttpClientFactory http)
     {
         _provider = provider;
         _logger   = logger;
+        _http     = http;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -56,7 +59,7 @@ public class IngestWorker : BackgroundService
         {
             _logger.LogInformation("Ingesting from source: {SourceName}", source.Name);
 
-            IEnumerable<(string Title, string Content, string SourceName, string SourceUrl)> stories;
+            IEnumerable<StoryItem> stories;
 
             try
             {
@@ -72,7 +75,8 @@ public class IngestWorker : BackgroundService
             foreach (var story in stories)
             {
                 var context = new IngestContext(
-                    story.Title, story.Content, story.SourceName, story.SourceUrl, source.UserId);
+                    story.Title, story.Content, story.SourceName, story.SourceUrl, source.UserId,
+                    story.ThumbnailUrl, story.VideoUrl);
 
                 var pipeline = pipelineFactory.Build();
                 await pipeline.HandleAsync(context, ct);
@@ -112,31 +116,117 @@ public class IngestWorker : BackgroundService
         await uow.CommitAsync(ct);
     }
 
+    private record StoryItem(
+        string Title, string Content, string SourceName, string SourceUrl,
+        string? ThumbnailUrl, string? VideoUrl);
+
     /// <summary>
-    /// Fetches stories from an RSS/Atom feed for a given <paramref name="source"/>.
-    /// Items published in the last 2 hours only; max 10 per call.
-    /// HTML content is stripped using HtmlAgilityPack.
+    /// Fetches stories from an RSS/Atom feed. For items with short content (&lt;300 chars),
+    /// follows the item link and scrapes the full article body.
+    /// Also extracts media:thumbnail and media:content video URLs.
     /// </summary>
-    private async Task<IEnumerable<(string Title, string Content, string SourceName, string SourceUrl)>>
-        FetchStoriesAsync(Source source, CancellationToken ct)
+    private async Task<IEnumerable<StoryItem>> FetchStoriesAsync(Source source, CancellationToken ct)
     {
         var feed = await FeedReader.ReadAsync(source.Url);
         var cutoff = DateTime.UtcNow.AddHours(-24);
 
-        // Accept items with no date so feeds that omit PublishingDate still work.
-        return feed.Items
+        var candidates = feed.Items
             .Where(item => !item.PublishingDate.HasValue ||
                            item.PublishingDate.Value.ToUniversalTime() >= cutoff)
             .Take(20)
-            .Select(item =>
-            {
-                var raw = string.IsNullOrWhiteSpace(item.Content)
-                    ? item.Description ?? string.Empty
-                    : item.Content;
-                var clean = StripHtml(raw);
-                return (item.Title?.Trim() ?? "(no title)", clean, source.Name, source.Url);
-            })
             .ToList();
+
+        var results = new List<StoryItem>();
+        foreach (var item in candidates)
+        {
+            var raw   = string.IsNullOrWhiteSpace(item.Content) ? item.Description ?? "" : item.Content;
+            var clean = StripHtml(raw);
+            var full  = await FetchFullContentAsync(item.Link, clean, ct);
+            var (thumb, video) = ExtractMedia(item);
+            results.Add(new StoryItem(item.Title?.Trim() ?? "(no title)", full, source.Name, source.Url, thumb, video));
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// If the RSS snippet is short (&lt;300 chars), fetches the linked article page and
+    /// extracts the body text using common article selectors.  Falls back to the
+    /// original snippet on any error or when scraping yields less content.
+    /// </summary>
+    private async Task<string> FetchFullContentAsync(string? url, string fallback, CancellationToken ct)
+    {
+        if (fallback.Length >= 300 || string.IsNullOrWhiteSpace(url)) return fallback;
+
+        try
+        {
+            var client = _http.CreateClient("scraper");
+            using var response = await client.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode) return fallback;
+
+            var html = await response.Content.ReadAsStringAsync(ct);
+            var doc  = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            // Strip non-content nodes
+            var trash = doc.DocumentNode
+                .SelectNodes("//script|//style|//nav|//header|//footer|//aside|//iframe|//form");
+            if (trash is not null)
+                foreach (var node in trash.ToList()) node.Remove();
+
+            // Try progressively broader selectors
+            var contentNode =
+                doc.DocumentNode.SelectSingleNode("//article") ??
+                doc.DocumentNode.SelectSingleNode("//*[contains(@class,'article-body')]") ??
+                doc.DocumentNode.SelectSingleNode("//*[contains(@class,'article__body')]") ??
+                doc.DocumentNode.SelectSingleNode("//*[contains(@class,'story-body')]") ??
+                doc.DocumentNode.SelectSingleNode("//*[contains(@class,'post-content')]") ??
+                doc.DocumentNode.SelectSingleNode("//*[contains(@class,'entry-content')]") ??
+                doc.DocumentNode.SelectSingleNode("//main");
+
+            var text = StripHtml((contentNode ?? doc.DocumentNode).InnerText);
+
+            return text.Length > fallback.Length + 50 ? text : fallback;
+        }
+        catch
+        {
+            return fallback;
+        }
+    }
+
+    private static readonly XNamespace MediaNs = "http://search.yahoo.com/mrss/";
+
+    /// <summary>
+    /// Extracts thumbnail and video URLs from <c>media:thumbnail</c> and
+    /// <c>media:content</c> elements in the raw RSS item XML.
+    /// </summary>
+    private static (string? ThumbnailUrl, string? VideoUrl) ExtractMedia(FeedItem item)
+    {
+        var el = item.SpecificItem?.Element;
+        if (el is null) return (null, null);
+
+        // media:thumbnail → explicit thumbnail element
+        var thumb = el.Descendants(MediaNs + "thumbnail")
+                      .FirstOrDefault()?.Attribute("url")?.Value;
+
+        string? videoUrl = null;
+        string? imageUrl = null;
+
+        foreach (var content in el.Descendants(MediaNs + "content"))
+        {
+            var url    = content.Attribute("url")?.Value;
+            var type   = content.Attribute("type")?.Value ?? "";
+            var medium = content.Attribute("medium")?.Value ?? "";
+            if (url is null) continue;
+
+            if (medium.Equals("video", StringComparison.OrdinalIgnoreCase) ||
+                type.StartsWith("video/", StringComparison.OrdinalIgnoreCase))
+                videoUrl ??= url;
+            else if (medium.Equals("image", StringComparison.OrdinalIgnoreCase) ||
+                     type.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                imageUrl ??= url;
+        }
+
+        return (thumb ?? imageUrl, videoUrl);
     }
 
     private static string StripHtml(string html)

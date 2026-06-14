@@ -64,6 +64,12 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddHttpClient<NewsApiService>();
 
+        services.AddHttpClient("scraper", client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (compatible; NewsFlowBot/1.0)");
+            client.Timeout = TimeSpan.FromSeconds(12);
+        });
+
         services.AddHostedService<IngestWorker>();
         services.AddHostedService<SchedulerWorker>();
         services.AddHostedService<VideoWorker>();
